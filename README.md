@@ -1,4 +1,4 @@
-# Datatype Progress
+# ProgressType
 
 A color, variable OpenType font that renders progress bars from text expressions.
 
@@ -44,12 +44,12 @@ Switch palettes via CSS:
 
 ```css
 @font-palette-values --rag {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 1;
 }
 
 .bar {
-  font-family: 'DatatypeProgress', monospace;
+  font-family: 'ProgressType', monospace;
   font-feature-settings: 'liga' 1, 'calt' 1;
   font-palette: --rag;
 }
@@ -71,13 +71,13 @@ Static instances (TTF + WOFF2) are also exported for each weight at width 100.
 ```html
 <style>
   @font-face {
-    font-family: 'DatatypeProgress';
-    src: url('DatatypeProgress[wdth,wght].woff2') format('woff2');
+    font-family: 'ProgressType';
+    src: url('ProgressType[wdth,wght].woff2') format('woff2');
     font-weight: 100 900;
     font-stretch: 50% 150%;
   }
   .bar {
-    font-family: 'DatatypeProgress', monospace;
+    font-family: 'ProgressType', monospace;
     font-feature-settings: 'liga' 1, 'calt' 1;
   }
 </style>
@@ -116,7 +116,7 @@ sources/
 dev/
   preview.html           # specimen page with palette swap demos + axis sliders
 fonts/
-  variable/              # Datatype Progress variable font
+  variable/              # ProgressType variable font
   ttf/                   # static instances per weight
   webfonts/              # static WOFF2 per weight
 ```

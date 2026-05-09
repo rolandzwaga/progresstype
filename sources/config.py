@@ -1,4 +1,4 @@
-"""Datatype Progress configuration constants."""
+"""ProgressType configuration constants."""
 
 from dataclasses import dataclass
 
@@ -18,7 +18,7 @@ ASCII_WIDTH = 500
 SPACE_WIDTH = 250
 DIGIT_WIDTH = 500
 
-FAMILY_NAME = "DatatypeProgress"
+FAMILY_NAME = "ProgressType"
 REGULAR_STYLE = "Regular"
 
 # Maximum number of stacked segments (horizontal multi-segment).

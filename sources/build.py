@@ -1,4 +1,4 @@
-"""Datatype Progress build: variable font + static instances."""
+"""ProgressType build: variable font + static instances."""
 
 import os
 import sys
@@ -74,7 +74,7 @@ def main():
     ttf_dir = os.path.join(PROJECT_ROOT, "fonts", "ttf")
     woff2_dir = os.path.join(PROJECT_ROOT, "fonts", "webfonts")
 
-    print("Datatype Progress Build")
+    print("ProgressType Build")
     print("=" * 50)
 
     axes_config = [

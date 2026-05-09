@@ -17,9 +17,11 @@ import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 
+from sources.config import FAMILY_NAME
+
 
 FONT_PATH = os.path.join(
-    PROJECT_ROOT, "fonts", "variable", "DatatypeProgress[wdth,wght].ttf"
+    PROJECT_ROOT, "fonts", "variable", f"{FAMILY_NAME}[wdth,wght].ttf"
 )
 DEFAULT_OUT = os.path.join(PROJECT_ROOT, "dev", "specimen.svg")
 

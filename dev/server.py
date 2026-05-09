@@ -40,7 +40,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
-        print(f"Datatype Progress dev server")
+        print(f"ProgressType dev server")
         print(f"  http://localhost:{PORT}/")
         print(f"  serving from {PROJECT_ROOT}")
         print(f"  Ctrl+C to stop")

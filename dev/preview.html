@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Datatype Progress — specimen</title>
+<title>ProgressType — specimen</title>
 <style>
 /* Static font for nearly all of the page — no axis interpolation, far less
    font-cache pressure. Avoids Chromium STATUS_BREAKPOINT crashes that occurred
    when changing font-variation-settings with the variable font loaded. */
 @font-face {
-  font-family: 'DatatypeProgress';
-  src: url('../fonts/webfonts/DatatypeProgress-Regular.woff2') format('woff2');
+  font-family: 'ProgressType';
+  src: url('../fonts/webfonts/ProgressType-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -17,24 +17,24 @@
 
 /* Variable font under a DIFFERENT family name, used only by the axis demo. */
 @font-face {
-  font-family: 'DatatypeProgressVF';
-  src: url('../fonts/variable/DatatypeProgress[wdth,wght].woff2') format('woff2');
+  font-family: 'ProgressTypeVF';
+  src: url('../fonts/variable/ProgressType[wdth,wght].woff2') format('woff2');
   font-weight: 100 900;
   font-stretch: 50% 150%;
   font-display: block;
 }
 
-@font-palette-values --sequential  { font-family: 'DatatypeProgress'; base-palette: 0; }
-@font-palette-values --rag         { font-family: 'DatatypeProgress'; base-palette: 1; }
-@font-palette-values --categorical { font-family: 'DatatypeProgress'; base-palette: 2; }
-@font-palette-values --ocean       { font-family: 'DatatypeProgress'; base-palette: 3; }
-@font-palette-values --mono        { font-family: 'DatatypeProgress'; base-palette: 4; }
+@font-palette-values --sequential  { font-family: 'ProgressType'; base-palette: 0; }
+@font-palette-values --rag         { font-family: 'ProgressType'; base-palette: 1; }
+@font-palette-values --categorical { font-family: 'ProgressType'; base-palette: 2; }
+@font-palette-values --ocean       { font-family: 'ProgressType'; base-palette: 3; }
+@font-palette-values --mono        { font-family: 'ProgressType'; base-palette: 4; }
 
 /* === Custom palettes via CSS — no font rebuild needed === */
 
 /* Brand override: indigo, pink, amber on a dark track */
 @font-palette-values --brand {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 2;
   override-colors:
     0 #1f2937,    /* track    */
@@ -50,7 +50,7 @@
 
 /* Earth tones */
 @font-palette-values --earth {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 0;
   override-colors:
     0 #44403c,    /* stone-700 (track) */
@@ -72,7 +72,7 @@
   --c-3: #f472b6;
 }
 @font-palette-values --tokens {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 0;
   override-colors:
     0 var(--c-track),
@@ -86,25 +86,25 @@
    overridden to the track color, so the Nth segment looks empty and
    the bar appears fixed-width when the values sum to 100. */
 @font-palette-values --pad3 {
-  font-family: 'DatatypeProgress'; base-palette: 2;
+  font-family: 'ProgressType'; base-palette: 2;
   override-colors: 3 rgba(0,0,0,0);
 }
 @font-palette-values --pad4 {
-  font-family: 'DatatypeProgress'; base-palette: 2;
+  font-family: 'ProgressType'; base-palette: 2;
   override-colors: 4 rgba(0,0,0,0);
 }
 @font-palette-values --pad5 {
-  font-family: 'DatatypeProgress'; base-palette: 2;
+  font-family: 'ProgressType'; base-palette: 2;
   override-colors: 5 rgba(0,0,0,0);
 }
 @font-palette-values --pad8 {
-  font-family: 'DatatypeProgress'; base-palette: 2;
+  font-family: 'ProgressType'; base-palette: 2;
   override-colors: 8 rgba(0,0,0,0);
 }
 
 /* Mirror used by the axis demo (variable font family) */
 @font-palette-values --categoricalVF {
-  font-family: 'DatatypeProgressVF';
+  font-family: 'ProgressTypeVF';
   base-palette: 2;
 }
 
@@ -150,7 +150,7 @@ h2 {
 }
 
 .bars {
-  font-family: 'DatatypeProgress', monospace;
+  font-family: 'ProgressType', monospace;
   font-feature-settings: 'liga' 1, 'calt' 1;
   font-size: 22px;
   line-height: 1.4;
@@ -185,7 +185,7 @@ h2 {
   margin-bottom: 8px;
 }
 .palette-card .swatch {
-  font-family: 'DatatypeProgress', monospace;
+  font-family: 'ProgressType', monospace;
   font-feature-settings: 'liga' 1, 'calt' 1;
   font-size: 20px;
   display: block;
@@ -206,10 +206,10 @@ h2 {
 .p-categoricalVF { font-palette: --categoricalVF; }
 
 /* Axis demo: variable font is isolated to this one element. */
-#axisDemo { font-family: 'DatatypeProgressVF', monospace; }
+#axisDemo { font-family: 'ProgressTypeVF', monospace; }
 
 .vertical-row {
-  font-family: 'DatatypeProgress', monospace;
+  font-family: 'ProgressType', monospace;
   font-feature-settings: 'liga' 1, 'calt' 1;
   font-size: 64px;
   letter-spacing: 4px;
@@ -242,7 +242,7 @@ code.syntax {
 }
 
 #playground {
-  font-family: 'DatatypeProgress', monospace;
+  font-family: 'ProgressType', monospace;
   font-feature-settings: 'liga' 1, 'calt' 1;
   font-size: 28px;
   display: flex;
@@ -262,7 +262,7 @@ pre.code {
 </head>
 <body>
 <main>
-  <h1>Datatype Progress</h1>
+  <h1>ProgressType</h1>
   <p class="subtitle">An OpenType variable font that renders <code class="syntax">{h:25,10,15}</code> as a stacked horizontal progress bar — and <code class="syntax">{v:75}</code> as a vertical one.</p>
 
   <section>
@@ -324,12 +324,12 @@ pre.code {
    strip + border outline shows through — matches how the empty portion of
    single-segment {h:NN} looks. */
 @font-palette-values --pad4 {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 2;                /* categorical */
   override-colors: 4 rgba(0,0,0,0);
 }
 
-.bar { font-family: 'DatatypeProgress', monospace; font-feature-settings: 'liga' 1, 'calt' 1; }
+.bar { font-family: 'ProgressType', monospace; font-feature-settings: 'liga' 1, 'calt' 1; }
 .bar.padded { font-palette: --pad4; }
 
 &lt;p class="bar padded"&gt;{h:25,10,15,50}&lt;/p&gt;</pre>
@@ -370,7 +370,7 @@ pre.code {
 
     <pre class="code">/* Override individual palette entries — start from a shipped base palette */
 @font-palette-values --brand {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 2;
   override-colors:
     0 #1f2937,        /* track */
@@ -381,7 +381,7 @@ pre.code {
 
 /* You can also pull from CSS custom properties — connects to design tokens */
 @font-palette-values --tokens {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 0;
   override-colors:
     1 var(--brand-primary),
@@ -441,19 +441,19 @@ pre.code {
   <section>
     <h2>Usage</h2>
     <pre class="code">@font-face {
-  font-family: 'DatatypeProgress';
-  src: url('DatatypeProgress[wdth,wght].woff2') format('woff2');
+  font-family: 'ProgressType';
+  src: url('ProgressType[wdth,wght].woff2') format('woff2');
   font-weight: 100 900;
   font-stretch: 50% 150%;
 }
 
 @font-palette-values --rag {
-  font-family: 'DatatypeProgress';
+  font-family: 'ProgressType';
   base-palette: 1;       /* 0=sequential, 1=rag, 2=categorical, 3=ocean, 4=mono */
 }
 
 .bar {
-  font-family: 'DatatypeProgress', monospace;
+  font-family: 'ProgressType', monospace;
   font-feature-settings: 'liga' 1, 'calt' 1;
   font-palette: --rag;
 }
