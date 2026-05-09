@@ -1,4 +1,4 @@
-.PHONY: build clean install venv
+.PHONY: build clean install venv serve
 
 venv:
 	python3 -m venv .venv
@@ -10,5 +10,8 @@ install:
 build:
 	.venv/bin/python sources/build.py
 
+serve:
+	.venv/bin/python dev/server.py
+
 clean:
-	rm -rf fonts/*.ttf fonts/*.woff2
+	rm -rf fonts/variable/* fonts/ttf/* fonts/webfonts/*
