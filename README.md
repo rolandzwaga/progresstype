@@ -9,7 +9,7 @@ A color, variable OpenType font that renders progress bars from text expressions
 {v:75}              vertical bar at 75%
 ```
 
-Built as a sibling project to [Datatype](../datatype/) — same idea, focused on progress indicators, with CPAL color palette support and variable `wght`/`wdth` axes.
+Inspired by [Datatype](https://github.com/franktisellano/datatype) — same idea, focused on progress indicators, with CPAL color palette support and variable `wght`/`wdth` axes.
 
 ## Syntax
 
