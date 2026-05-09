@@ -25,22 +25,28 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - run: python sources/build.py
+
       - name: Stage site
-        env:
-          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           mkdir -p _site
           cp dev/preview.html _site/index.html
           touch _site/.nojekyll
+          cp -r fonts _site/fonts
 
-          base="https://github.com/${REPO}/releases/latest/download"
-          # Rewrite the two @font-face srcs (regular static + variable).
-          # The in-page code-example block at ~line 445 is left as-is.
-          sed -i \
-            -e "s|\.\./fonts/webfonts/ProgressType-Regular\.woff2|${base}/ProgressType-Regular.woff2|" \
-            -e "s|\.\./fonts/variable/ProgressType\[wdth,wght\]\.woff2|${base}/ProgressType-VF.woff2|" \
-            _site/index.html
+          # Rewrite the two @font-face srcs from "../fonts/..." (dev path) to
+          # "fonts/..." (relative to _site/index.html). The in-page code-example
+          # block at ~line 445 has no "../" prefix and is left untouched.
+          sed -i 's|\.\./fonts/|fonts/|g' _site/index.html
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
