@@ -4,11 +4,24 @@
 <meta charset="utf-8">
 <title>Datatype Progress — specimen</title>
 <style>
+/* Static font for nearly all of the page — no axis interpolation, far less
+   font-cache pressure. Avoids Chromium STATUS_BREAKPOINT crashes that occurred
+   when changing font-variation-settings with the variable font loaded. */
 @font-face {
   font-family: 'DatatypeProgress';
+  src: url('../fonts/webfonts/DatatypeProgress-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+/* Variable font under a DIFFERENT family name, used only by the axis demo. */
+@font-face {
+  font-family: 'DatatypeProgressVF';
   src: url('../fonts/variable/DatatypeProgress[wdth,wght].woff2') format('woff2');
   font-weight: 100 900;
   font-stretch: 50% 150%;
+  font-display: block;
 }
 
 @font-palette-values --sequential  { font-family: 'DatatypeProgress'; base-palette: 0; }
@@ -16,6 +29,84 @@
 @font-palette-values --categorical { font-family: 'DatatypeProgress'; base-palette: 2; }
 @font-palette-values --ocean       { font-family: 'DatatypeProgress'; base-palette: 3; }
 @font-palette-values --mono        { font-family: 'DatatypeProgress'; base-palette: 4; }
+
+/* === Custom palettes via CSS — no font rebuild needed === */
+
+/* Brand override: indigo, pink, amber on a dark track */
+@font-palette-values --brand {
+  font-family: 'DatatypeProgress';
+  base-palette: 2;
+  override-colors:
+    0 #1f2937,    /* track    */
+    1 #6366f1,    /* indigo-500 */
+    2 #ec4899,    /* pink-500   */
+    3 #f59e0b,    /* amber-500  */
+    4 #10b981,    /* emerald-500 */
+    5 #06b6d4,    /* cyan-500   */
+    6 #8b5cf6,    /* violet-500 */
+    7 #f97316,    /* orange-500 */
+    8 #84cc16;    /* lime-500   */
+}
+
+/* Earth tones */
+@font-palette-values --earth {
+  font-family: 'DatatypeProgress';
+  base-palette: 0;
+  override-colors:
+    0 #44403c,    /* stone-700 (track) */
+    1 #a8a29e,    /* stone-400 */
+    2 #d6d3d1,    /* stone-300 */
+    3 #fde68a,    /* amber-200 */
+    4 #fbbf24,    /* amber-400 */
+    5 #d97706,    /* amber-600 */
+    6 #92400e,    /* amber-800 */
+    7 #78350f,    /* amber-900 */
+    8 #451a03;    /* amber-950 */
+}
+
+/* Pulled from CSS custom properties — connects to design tokens */
+:root {
+  --c-track: #2a2f3a;
+  --c-1: #38bdf8;
+  --c-2: #a78bfa;
+  --c-3: #f472b6;
+}
+@font-palette-values --tokens {
+  font-family: 'DatatypeProgress';
+  base-palette: 0;
+  override-colors:
+    0 var(--c-track),
+    1 var(--c-1),
+    2 var(--c-2),
+    3 var(--c-3);
+}
+
+/* === Trailing-track palettes ===
+   Each "--padN" palette is the categorical palette with position N
+   overridden to the track color, so the Nth segment looks empty and
+   the bar appears fixed-width when the values sum to 100. */
+@font-palette-values --pad3 {
+  font-family: 'DatatypeProgress'; base-palette: 2;
+  override-colors: 3 rgba(0,0,0,0);
+}
+@font-palette-values --pad4 {
+  font-family: 'DatatypeProgress'; base-palette: 2;
+  override-colors: 4 rgba(0,0,0,0);
+}
+@font-palette-values --pad5 {
+  font-family: 'DatatypeProgress'; base-palette: 2;
+  override-colors: 5 rgba(0,0,0,0);
+}
+@font-palette-values --pad8 {
+  font-family: 'DatatypeProgress'; base-palette: 2;
+  override-colors: 8 rgba(0,0,0,0);
+}
+
+/* Mirror used by the axis demo (variable font family) */
+@font-palette-values --categoricalVF {
+  font-family: 'DatatypeProgressVF';
+  base-palette: 2;
+}
 
 :root {
   --bg: #0b0d12;
@@ -105,6 +196,17 @@ h2 {
 .p-categorical { font-palette: --categorical; }
 .p-ocean       { font-palette: --ocean; }
 .p-mono        { font-palette: --mono; }
+.p-brand       { font-palette: --brand; }
+.p-earth       { font-palette: --earth; }
+.p-tokens      { font-palette: --tokens; }
+.p-pad3        { font-palette: --pad3; }
+.p-pad4        { font-palette: --pad4; }
+.p-pad5        { font-palette: --pad5; }
+.p-pad8        { font-palette: --pad8; }
+.p-categoricalVF { font-palette: --categoricalVF; }
+
+/* Axis demo: variable font is isolated to this one element. */
+#axisDemo { font-family: 'DatatypeProgressVF', monospace; }
 
 .vertical-row {
   font-family: 'DatatypeProgress', monospace;
@@ -164,7 +266,11 @@ pre.code {
   <p class="subtitle">An OpenType variable font that renders <code class="syntax">{h:25,10,15}</code> as a stacked horizontal progress bar — and <code class="syntax">{v:75}</code> as a vertical one.</p>
 
   <section>
-    <h2>Single-segment</h2>
+    <h2>Single-segment (fixed-width)</h2>
+    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
+      Bar is a fixed-size container; fill grows inside it. The empty space on the right
+      is the unfilled portion of the track.
+    </p>
     <div class="bars p-categorical">
       <div class="row"><span class="label">CPU</span><span>{h:23}</span><span class="value">23%</span></div>
       <div class="row"><span class="label">Memory</span><span>{h:67}</span><span class="value">67%</span></div>
@@ -174,21 +280,59 @@ pre.code {
   </section>
 
   <section>
-    <h2>Stacked multi-segment</h2>
+    <h2>Stacked multi-segment (fixed-width via padding)</h2>
     <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
-      Up to 8 segments; each segment's color is determined by its position in the list.
+      Multi-segment bars are <em>variable-width</em> by default — they grow with the sum of
+      values. To make them appear fixed-width, pad the values to total 100 and use a CSS
+      <code class="syntax">@font-palette-values</code> override so the trailing position uses
+      the track color. The empty-looking tail is just a normal segment painted in the track color.
     </p>
-    <div class="bars p-categorical">
-      <div class="row"><span class="label">2 segments</span><span>{h:30,40}</span><span class="value">70%</span></div>
-      <div class="row"><span class="label">3 segments</span><span>{h:25,10,15}</span><span class="value">50%</span></div>
-      <div class="row"><span class="label">4 segments</span><span>{h:20,15,10,25}</span><span class="value">70%</span></div>
-      <div class="row"><span class="label">8 segments</span><span>{h:10,10,10,10,10,10,10,10}</span><span class="value">80%</span></div>
+
+    <div class="bars">
+      <div class="row p-pad3">
+        <span class="label">CPU+IO 70%</span>
+        <span>{h:30,40,30}</span>
+        <span class="value">30 + 40 + (30 pad)</span>
+      </div>
+      <div class="row p-pad4">
+        <span class="label">3 phases 50%</span>
+        <span>{h:25,10,15,50}</span>
+        <span class="value">25 + 10 + 15 + (50 pad)</span>
+      </div>
+      <div class="row p-pad5">
+        <span class="label">4 phases 70%</span>
+        <span>{h:20,15,10,25,30}</span>
+        <span class="value">20 + 15 + 10 + 25 + (30 pad)</span>
+      </div>
+      <div class="row p-pad8">
+        <span class="label">7 even, 30% gap</span>
+        <span>{h:10,10,10,10,10,10,10,30}</span>
+        <span class="value">7×10 + (30 pad)</span>
+      </div>
     </div>
 
-    <h2 style="margin-top: 24px;">Same data, RAG palette</h2>
+    <h2 style="margin-top: 24px;">Naturally totals 100% — no padding needed</h2>
+    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
+      When your data already sums to 100, every segment is colored and the bar fills the full width.
+      RAG status is the canonical example.
+    </p>
     <div class="bars p-rag">
       <div class="row"><span class="label">Status</span><span>{h:45,30,25}</span><span class="value">on track / at risk / blocked</span></div>
     </div>
+
+    <pre class="code" style="margin-top: 16px;">/* Trailing-track palette: paint the Nth position transparent so only the
+   strip + border outline shows through — matches how the empty portion of
+   single-segment {h:NN} looks. */
+@font-palette-values --pad4 {
+  font-family: 'DatatypeProgress';
+  base-palette: 2;                /* categorical */
+  override-colors: 4 rgba(0,0,0,0);
+}
+
+.bar { font-family: 'DatatypeProgress', monospace; font-feature-settings: 'liga' 1, 'calt' 1; }
+.bar.padded { font-palette: --pad4; }
+
+&lt;p class="bar padded"&gt;{h:25,10,15,50}&lt;/p&gt;</pre>
   </section>
 
   <section>
@@ -203,6 +347,60 @@ pre.code {
   </section>
 
   <section>
+    <h2>Custom palettes via CSS</h2>
+    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
+      Define your own palettes with <code class="syntax">@font-palette-values</code> and
+      <code class="syntax">override-colors</code> — no font rebuild needed.
+    </p>
+
+    <div class="bars" style="margin-bottom: 12px;">
+      <div class="row">
+        <span class="label">brand</span>
+        <span class="p-brand">{h:25,15,20,10,15}</span>
+      </div>
+      <div class="row">
+        <span class="label">earth</span>
+        <span class="p-earth">{h:12,12,12,12,12,12,12,12}</span>
+      </div>
+      <div class="row">
+        <span class="label">design tokens</span>
+        <span class="p-tokens">{h:30,25,20}</span>
+      </div>
+    </div>
+
+    <pre class="code">/* Override individual palette entries — start from a shipped base palette */
+@font-palette-values --brand {
+  font-family: 'DatatypeProgress';
+  base-palette: 2;
+  override-colors:
+    0 #1f2937,        /* track */
+    1 #6366f1,        /* indigo  (1st segment)  */
+    2 #ec4899,        /* pink    (2nd segment)  */
+    3 #f59e0b;        /* amber   (3rd segment)  */
+}
+
+/* You can also pull from CSS custom properties — connects to design tokens */
+@font-palette-values --tokens {
+  font-family: 'DatatypeProgress';
+  base-palette: 0;
+  override-colors:
+    1 var(--brand-primary),
+    2 var(--brand-secondary),
+    3 var(--brand-accent);
+}
+
+.bar { font-palette: --brand; }
+&lt;p class="bar"&gt;{h:25,15,20}&lt;/p&gt;</pre>
+
+    <p style="color: var(--muted); font-size: 12px; margin: 16px 0 0;">
+      <strong style="color: var(--fg);">Heads-up:</strong> the standard CSS <code class="syntax">color</code>
+      property does not recolor CPAL fonts — only <code class="syntax">font-palette</code> does.
+      Browser support: Chrome 101+, Safari 15.4+, Firefox 107+ (~94% globally).
+      Older renderers fall back to the <code class="syntax">base-palette</code> colors instead of honoring overrides.
+    </p>
+  </section>
+
+  <section>
     <h2>Vertical (sparkline-style)</h2>
     <div class="vertical-row p-categorical">
       {v:10}{v:25}{v:40}{v:55}{v:70}{v:85}{v:100}{v:80}{v:60}{v:45}{v:30}{v:15}
@@ -214,15 +412,15 @@ pre.code {
     <h2>Variable axes — Width & Weight</h2>
     <div class="controls">
       <span class="axis-label">wdth</span>
-      <input type="range" id="wdth" min="50" max="150" value="100">
+      <input type="range" id="wdth" min="50" max="150" value="100" step="10">
       <span class="display" id="wdthVal">100</span>
     </div>
     <div class="controls">
       <span class="axis-label">wght</span>
-      <input type="range" id="wght" min="100" max="900" value="400" step="50">
+      <input type="range" id="wght" min="100" max="900" value="400" step="100">
       <span class="display" id="wghtVal">400</span>
     </div>
-    <div id="axisDemo" class="bars p-categorical" style="font-variation-settings: 'wdth' 100, 'wght' 400;">
+    <div id="axisDemo" class="bars p-categoricalVF" style="font-variation-settings: 'wdth' 100, 'wght' 400;">
       <div class="row"><span class="label">single</span><span>{h:65}</span></div>
       <div class="row"><span class="label">stacked</span><span>{h:25,15,20}</span></div>
     </div>
@@ -265,16 +463,33 @@ pre.code {
 </main>
 
 <script>
+// rAF throttle: coalesces rapid input events into at most one update per frame.
+// Without this, fast slider drags fire 60+ events/sec and overwhelm Chromium's
+// font cache when font-variation-settings changes — observed crash: STATUS_BREAKPOINT.
+function rafThrottle(fn) {
+  let pending = false;
+  let lastArgs;
+  return function (...args) {
+    lastArgs = args;
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      fn.apply(null, lastArgs);
+    });
+  };
+}
+
 const slider = document.getElementById('pct');
 const display = document.getElementById('display');
 const hbar = document.getElementById('hbar');
 const vbar = document.getElementById('vbar');
-function update() {
+const update = rafThrottle(() => {
   const v = slider.value;
   display.textContent = '{h:' + v + '} {v:' + v + '}';
   hbar.textContent = '{h:' + v + '}';
   vbar.textContent = '{v:' + v + '}';
-}
+});
 slider.addEventListener('input', update); update();
 
 const wdth = document.getElementById('wdth');
@@ -282,13 +497,27 @@ const wght = document.getElementById('wght');
 const wdthVal = document.getElementById('wdthVal');
 const wghtVal = document.getElementById('wghtVal');
 const axisDemo = document.getElementById('axisDemo');
-function updateAxes() {
+const updateAxes = rafThrottle(() => {
   wdthVal.textContent = wdth.value;
   wghtVal.textContent = wght.value;
   axisDemo.style.fontVariationSettings = `'wdth' ${wdth.value}, 'wght' ${wght.value}`;
-}
+});
 wdth.addEventListener('input', updateAxes);
 wght.addEventListener('input', updateAxes);
+
+// On release, snap to the final value once with no axis change pending,
+// then clear the inline style for ~1.5s of idle time so the GPU font cache
+// can evict transient variation tuples (mitigates Mozilla 1495661-style
+// per-instance accumulation observed in Chromium too).
+function snapAxes(e) {
+  // Force a final, canonical update with the slider's resting value.
+  axisDemo.style.fontVariationSettings = `'wdth' ${wdth.value}, 'wght' ${wght.value}`;
+}
+wdth.addEventListener('pointerup', snapAxes);
+wght.addEventListener('pointerup', snapAxes);
+wdth.addEventListener('change', snapAxes);
+wght.addEventListener('change', snapAxes);
+
 updateAxes();
 </script>
 </body>

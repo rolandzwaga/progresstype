@@ -23,22 +23,27 @@ FONT_PATH = os.path.join(
 )
 DEFAULT_OUT = os.path.join(PROJECT_ROOT, "dev", "specimen.svg")
 
-# Palette index 0..4 maps to the five shipped CPAL palettes.
+# For padded segments, override the trailing position to "none" so its fill
+# layer doesn't paint — only the strip + border outline shows. Matches how
+# the empty portion of single-segment {h:NN} looks against the page background.
+TRACK_NONE = "none"
+
+# Each example: (label, text, palette_index, font_size_px, overrides)
+# overrides maps palette index -> hex color or "none", applied on top of the base palette.
 EXAMPLES = [
-    # (label, text, palette_index, font_size_px)
-    ("single 23%",     "{h:23}",                    2,  28),
-    ("single 67%",     "{h:67}",                    2,  28),
-    ("single 91%",     "{h:91}",                    2,  28),
-    ("2 segments",     "{h:30,40}",                 2,  28),
-    ("3 segments",     "{h:25,10,15}",              2,  28),
-    ("4 segments",     "{h:20,15,10,25}",           2,  28),
-    ("8 segments",     "{h:10,10,10,10,10,10,10,10}", 2, 28),
-    ("RAG status",     "{h:45,30,25}",              1,  28),
-    ("sequential",     "{h:12,12,12,12,12,12,12,12}", 0, 28),
-    ("ocean",          "{h:12,12,12,12,12,12,12,12}", 3, 28),
-    ("mono",           "{h:65}",                    4,  28),
-    ("vertical row",   "{v:10}{v:25}{v:40}{v:55}{v:70}{v:85}{v:100}{v:80}{v:60}{v:45}{v:30}{v:15}", 2, 56),
-    ("inline",         "Loading {h:75}",            2,  24),
+    ("single 23%",       "{h:23}",                    2, 28, None),
+    ("single 67%",       "{h:67}",                    2, 28, None),
+    ("single 91%",       "{h:91}",                    2, 28, None),
+    ("2 colored + pad",  "{h:30,40,30}",              2, 28, {3: TRACK_NONE}),
+    ("3 colored + pad",  "{h:25,10,15,50}",           2, 28, {4: TRACK_NONE}),
+    ("4 colored + pad",  "{h:20,15,10,25,30}",        2, 28, {5: TRACK_NONE}),
+    ("7 colored + pad",  "{h:10,10,10,10,10,10,10,30}", 2, 28, {8: TRACK_NONE}),
+    ("RAG sums to 100",  "{h:45,30,25}",              1, 28, None),
+    ("sequential",       "{h:12,12,12,12,12,12,12,12}", 0, 28, None),
+    ("ocean",            "{h:12,12,12,12,12,12,12,12}", 3, 28, None),
+    ("mono",             "{h:65}",                    4, 28, None),
+    ("vertical row",     "{v:10}{v:25}{v:40}{v:55}{v:70}{v:85}{v:100}{v:80}{v:60}{v:45}{v:30}{v:15}", 2, 56, None),
+    ("inline",           "Loading {h:75}",            2, 24, None),
 ]
 
 ROW_HEIGHT = 70
@@ -48,7 +53,9 @@ TEXT_X = LEFT_MARGIN + LABEL_WIDTH + 20
 PAGE_WIDTH = 980
 
 
-def _palette_color(palette_entries, idx):
+def _palette_color(palette_entries, idx, overrides=None):
+    if overrides and idx in overrides:
+        return overrides[idx]
     c = palette_entries[idx]
     # uharfbuzz returns a Color with .red .green .blue .alpha as 0..255 ints
     return f"#{c.red:02x}{c.green:02x}{c.blue:02x}"
@@ -80,7 +87,7 @@ def render():
         f'style="background:#0b0d12;font-family:system-ui,sans-serif;">'
     )
 
-    for i, (label, text, palette_idx, font_size) in enumerate(EXAMPLES):
+    for i, (label, text, palette_idx, font_size, overrides) in enumerate(EXAMPLES):
         y = LEFT_MARGIN + i * ROW_HEIGHT + ROW_HEIGHT // 2
 
         # Shape with HarfBuzz
@@ -124,7 +131,9 @@ def render():
             if glyph_name in color_layers:
                 layers = color_layers[glyph_name]
                 for layer in layers:
-                    color = _palette_color(palette, layer.colorID)
+                    color = _palette_color(palette, layer.colorID, overrides)
+                    if color == "none":
+                        continue   # skip painting this layer entirely
                     path = _glyph_to_svg_path(glyph_set, layer.name)
                     if path:
                         svg.append(
