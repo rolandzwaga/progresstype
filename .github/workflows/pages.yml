@@ -4,6 +4,11 @@ on:
   workflow_run:
     workflows: [Release]
     types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - dev/preview.html
+      - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
@@ -18,7 +23,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
