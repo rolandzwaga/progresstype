@@ -55,22 +55,33 @@ def _seg_advance(p, pct):
     return max(1, round(p.h_inner_width * pct / 100))
 
 
+# Segments extend their drawing this many UPM past their advance width so the
+# next glyph's left edge fully covers the AA seam — eliminates sub-pixel gaps
+# at small rendered sizes. Whatever follows (next segment or the closer) draws
+# over this overlap region.
+_SEG_OVERLAP = 8
+
+
 # ---------------------------------------------------------------------------
 # Drawing functions
 # ---------------------------------------------------------------------------
 
 def _draw_open_track(pen, p):
-    """Opener track drawing: left vertical border + opener-width top/bottom strips."""
+    """Opener track drawing: left vertical border + opener-width top/bottom strips.
+
+    The left vertical border is extended right by _SEG_OVERLAP so the first
+    segment's drawing overdraws any AA seam at the opener-segment boundary.
+    """
     yob, yot, yib, yit = _y_bounds(p)
 
-    # Left vertical border (full height of bar at left edge)
+    # Left vertical border, extended right by overlap.
     lx0 = p.h_bar_lead
-    lx1 = p.h_bar_lead + p.h_bar_border
+    lx1 = p.h_bar_lead + p.h_bar_border + _SEG_OVERLAP
     _rect(pen, lx0, yob, lx1, yot)
 
-    # Top strip portion (from right of vertical border to opener's advance)
+    # Top/bottom strip portions for any padding region (zero when padding=0).
     sx0 = p.h_bar_lead + p.h_bar_border
-    sx1 = p.h_open_advance
+    sx1 = p.h_open_advance + _SEG_OVERLAP
     if sx1 > sx0:
         _rect(pen, sx0, yit, sx1, yot)  # top strip
         _rect(pen, sx0, yob, sx1, yib)  # bottom strip
@@ -94,21 +105,21 @@ def _draw_close_track(pen, p):
 
 
 def _draw_strip(pen, p, pct):
-    """Top + bottom track strips spanning a segment of width = NN%."""
+    """Top + bottom track strips spanning a segment of width = NN%, with overlap."""
     if pct <= 0:
         return
     yob, yot, yib, yit = _y_bounds(p)
-    w = _seg_advance(p, pct)
+    w = _seg_advance(p, pct) + _SEG_OVERLAP
     _rect(pen, 0, yit, w, yot)  # top
     _rect(pen, 0, yob, w, yib)  # bottom
 
 
 def _draw_fill(pen, p, pct):
-    """Colored fill rectangle for segment of width = NN%."""
+    """Colored fill rectangle for segment of width = NN%, with overlap."""
     if pct <= 0:
         return
     yob, yot, yib, yit = _y_bounds(p)
-    w = _seg_advance(p, pct)
+    w = _seg_advance(p, pct) + _SEG_OVERLAP
     _rect(pen, 0, yib, w, yit)
 
 

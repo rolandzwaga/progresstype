@@ -36,7 +36,7 @@ class FontParams:
     h_bar_height: int = 420
     h_bar_baseline: int = 60
     h_bar_border: int = 50
-    h_bar_padding: int = 20
+    h_bar_padding: int = 0       # 0 = fills extend right up to the borders
     h_bar_lead: int = 60
     h_bar_trail: int = 60
 
@@ -44,7 +44,7 @@ class FontParams:
     v_bar_height: int = 900
     v_bar_baseline: int = -150
     v_bar_border: int = 50
-    v_bar_padding: int = 20
+    v_bar_padding: int = 0
     v_bar_lead: int = 40
     v_bar_trail: int = 40
 
