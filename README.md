@@ -13,14 +13,20 @@ Built as a sibling project to [Datatype](../datatype/) — same idea, focused on
 
 ## Syntax
 
-| Pattern | Result |
-| --- | --- |
-| `{h:N}` | horizontal bar, N% (0..100) |
-| `{h:N,M}` | stacked horizontal bar, segments N, M |
-| `{h:N,M,...}` up to 8 | stacked with up to 8 positions |
-| `{v:N}` | vertical bar, N% |
+| Pattern | Result | Visual |
+| --- | --- | --- |
+| `{h:N}` | horizontal bar, N% (0..100) | **fixed width** — N% colored fill, (100-N)% empty track on the right |
+| `{h:N,M,...}` up to 8 | stacked horizontal bar | **variable width** — bar grows with the sum of segment values |
+| `{v:N}` | vertical bar, N% | **fixed cell** — fill grows from the bottom |
 
-Vertical bars are single-segment only — multi-segment vertical isn't physically possible in inline text without a per-stack-position glyph explosion.
+The visual difference between single and multi-segment is intentional and reflects two distinct use cases:
+
+- **Single `{h:N}` and `{v:N}`** — show progress *against a known whole*. The bar is a fixed-size container; the fill is N% of it. Empty space is meaningful (it's "the rest").
+- **Multi `{h:N,M,...}`** — show *proportional breakdowns*. Segment widths are absolute (in percent of a reference width), and the bar's total visual width is the sum. There is no implicit "remainder" — if you want one, manually pad the values to total 100% (e.g. `{h:25,10,15,50}` with the trailing position styled as a track-color via `font-palette` overrides).
+
+The architectural reason for this split: OpenType GSUB cannot perform arithmetic, so a renderer cannot compute "100 - sum(segments)" to draw the remainder. Multi-segment fixed-width would require pre-baking every possible value combination — impractical at 1% × 8 segments.
+
+Vertical bars are single-segment only.
 
 ## Color (position-based CPAL)
 
@@ -86,8 +92,13 @@ Static instances (TTF + WOFF2) are also exported for each weight at width 100.
 ```sh
 make venv      # create .venv and install fontTools
 make build     # writes fonts/{variable,ttf,webfonts}/
+make serve     # serves dev/preview.html at http://localhost:8080/
 make clean
 ```
+
+The dev server is needed because `dev/preview.html` references `../fonts/...` —
+serving from `dev/` directly with `python -m http.server` can't reach above
+the served root. `make serve` serves from project root and routes `/` → preview.html.
 
 ## Project layout
 

@@ -13,7 +13,8 @@ from sources.config import (
 from sources.glyphs.base_imported import draw_base_glyphs
 from sources.glyphs.progress_h import (
     draw_progress_h_glyphs, colr_layers_h,
-    generate_progress_h_feature_code, progress_h_calt_lookups,
+    generate_progress_h_feature_code, generate_progress_h_full_liga_code,
+    progress_h_calt_lookups,
 )
 from sources.glyphs.progress_v import (
     draw_progress_v_glyphs, colr_layers_v, generate_progress_v_feature_code,
@@ -25,20 +26,26 @@ from sources.export import export_font
 
 
 def _feature_code():
+    h_full_fea = generate_progress_h_full_liga_code()
     h_fea = generate_progress_h_feature_code()
     v_fea = generate_progress_v_feature_code()
 
-    # Vertical uses a simple liga lookup (single-segment direct ligatures).
-    # Horizontal uses a multi-stage calt pipeline.
+    # liga: direct ligatures for fixed-width single-segment {h:NN} and {v:NN}.
+    # calt: multi-stage pipeline for stacked horizontal {h:NN,MM,...}.
+    # The liga direct match is longer than the calt open ligature ({h:NN} vs {h:),
+    # so single-segment input always resolves to the fixed-width baked glyph.
     h_calt_lookups = progress_h_calt_lookups()
     h_calt_block = "\n".join(f"    lookup {name};" for name in h_calt_lookups)
 
     return f"""
+{h_full_fea}
+
 {h_fea}
 
 {v_fea}
 
 feature liga {{
+    lookup prog_h_full_liga;
     lookup prog_v_liga;
 }} liga;
 

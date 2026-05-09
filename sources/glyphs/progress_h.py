@@ -139,6 +139,61 @@ def _draw_seg_base(pen, p, pct):
 
 
 # ---------------------------------------------------------------------------
+# Full-width single-segment glyphs (used by the {h:NN} direct ligature)
+#
+# These bake the full bar (left border + inner area + right border + lead/trail
+# whitespace) into a single composite glyph with two COLR layers:
+#   layer 0: prog_h_full_track   — full track frame at palette[0]
+#   layer 1: prog_h_full_fill_NN — colored fill of NN% width on the left, at palette[1]
+# ---------------------------------------------------------------------------
+
+def _full_inner_x(p):
+    """Return (x_inner_start, x_inner_end) within the full bar coordinate space."""
+    x0 = p.h_bar_lead + p.h_bar_border + p.h_bar_padding
+    x1 = p.h_bar_width - p.h_bar_trail - p.h_bar_border - p.h_bar_padding
+    return x0, x1
+
+
+def _draw_full_track(pen, p):
+    """Full-width track frame: left border, top + bottom strips, right border."""
+    yob, yot, yib, yit = _y_bounds(p)
+
+    # Left vertical border
+    lx0 = p.h_bar_lead
+    lx1 = p.h_bar_lead + p.h_bar_border
+    _rect(pen, lx0, yob, lx1, yot)
+
+    # Right vertical border
+    rx0 = p.h_bar_width - p.h_bar_trail - p.h_bar_border
+    rx1 = p.h_bar_width - p.h_bar_trail
+    _rect(pen, rx0, yob, rx1, yot)
+
+    # Top strip + bottom strip across the full inner span (between the borders)
+    sx0 = lx1
+    sx1 = rx0
+    if sx1 > sx0:
+        _rect(pen, sx0, yit, sx1, yot)  # top
+        _rect(pen, sx0, yob, sx1, yib)  # bottom
+
+
+def _draw_full_fill(pen, p, pct):
+    """Colored fill of NN% width, positioned at the inner-area start of the full bar."""
+    if pct <= 0:
+        return
+    yob, yot, yib, yit = _y_bounds(p)
+    fx0, fx1 = _full_inner_x(p)
+    inner_w = fx1 - fx0
+    drawn = max(1, round(inner_w * pct / 100))
+    _rect(pen, fx0, yib, fx0 + drawn, yit)
+
+
+def _draw_full_base(pen, p, pct):
+    """Monochrome fallback: full track + colored fill, both in foreground color."""
+    _draw_full_track(pen, p)
+    _draw_full_fill(pen, p, pct)
+
+
+# ---------------------------------------------------------------------------
 # Glyph registration
 # ---------------------------------------------------------------------------
 
@@ -188,6 +243,19 @@ def draw_progress_h_glyphs(glyph_data, params=None):
                 return lambda pen: _draw_seg_base(pen, p, pct_)
             glyph_data[f"prog_h_seg_{pct}_pos{pos}"] = (adv, make_seg())
 
+    # --- Fixed-width single-segment baked glyphs (for {h:NN} direct ligature) ---
+    glyph_data["prog_h_full_track"] = (
+        p.h_bar_width, lambda pen: _draw_full_track(pen, p)
+    )
+    for pct in range(0, 101):
+        def make_full_fill(pct_=pct):
+            return lambda pen: _draw_full_fill(pen, p, pct_)
+        glyph_data[f"prog_h_full_fill_{pct}"] = (p.h_bar_width, make_full_fill())
+
+        def make_full_base(pct_=pct):
+            return lambda pen: _draw_full_base(pen, p, pct_)
+        glyph_data[f"prog_h_full_{pct}"] = (p.h_bar_width, make_full_base())
+
 
 def colr_layers_h():
     """Return COLR layer mapping for all horizontal composite glyphs."""
@@ -201,12 +269,48 @@ def colr_layers_h():
                 (f"prog_h_strip_{pct}", 0),
                 (f"prog_h_fill_{pct}",  pos),  # palette index = position
             ]
+    # Fixed-width single-segment bars — track at palette[0], fill at palette[1].
+    for pct in range(0, 101):
+        layers[f"prog_h_full_{pct}"] = [
+            ("prog_h_full_track", 0),
+            (f"prog_h_full_fill_{pct}", 1),
+        ]
     return layers
 
 
 # ---------------------------------------------------------------------------
 # OpenType feature code
 # ---------------------------------------------------------------------------
+
+def generate_progress_h_full_liga_code():
+    """Generate direct ligature code for {h:NN} -> prog_h_full_NN.
+
+    These ligatures take priority over the multi-segment open ligature (since
+    they match a longer sequence including the closing brace). Produces a
+    fixed-width single-segment bar where the colored fill grows from the left
+    and the remainder shows as empty track.
+    """
+    lines = []
+    lines.append("lookup prog_h_full_liga {")
+    # 3-digit: {h:100}
+    seq_100 = "uni007B uni0068 uni003A uni0031 uni0030 uni0030 uni007D"
+    lines.append(f"  sub {seq_100} by prog_h_full_100;")
+    # 2-digit: {h:10}..{h:99}
+    for tens in range(1, 10):
+        for ones in range(0, 10):
+            pct = tens * 10 + ones
+            seq = (
+                f"uni007B uni0068 uni003A "
+                f"uni003{tens} uni003{ones} uni007D"
+            )
+            lines.append(f"  sub {seq} by prog_h_full_{pct};")
+    # 1-digit: {h:0}..{h:9}
+    for d in range(0, 10):
+        seq = f"uni007B uni0068 uni003A uni003{d} uni007D"
+        lines.append(f"  sub {seq} by prog_h_full_{d};")
+    lines.append("} prog_h_full_liga;")
+    return "\n".join(lines)
+
 
 def generate_progress_h_feature_code():
     """Generate calt feature code for horizontal multi-segment progress bars."""
