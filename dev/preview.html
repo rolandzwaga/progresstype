@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ProgressType — specimen</title>
+<title>ProgressType — demo</title>
 <style>
 /* Static font for nearly all of the page — no axis interpolation, far less
    font-cache pressure. Avoids Chromium STATUS_BREAKPOINT crashes that occurred
@@ -18,7 +18,7 @@
 /* Variable font under a DIFFERENT family name, used only by the axis demo. */
 @font-face {
   font-family: 'ProgressTypeVF';
-  src: url('../fonts/variable/ProgressType[wdth,wght].woff2') format('woff2');
+  src: url('../fonts/variable/ProgressType[RADI,wdth,wght].woff2') format('woff2');
   font-weight: 100 900;
   font-stretch: 50% 150%;
   font-display: block;
@@ -419,18 +419,23 @@ pre.code {
   </section>
 
   <section>
-    <h2>Variable axes — Width & Weight</h2>
+    <h2>Variable axes — Width, Weight, Radius</h2>
     <div class="controls">
-      <span class="axis-label">wdth</span>
+      <span class="axis-label">Width</span>
       <input type="range" id="wdth" min="50" max="150" value="100" step="10">
       <span class="display" id="wdthVal">100</span>
     </div>
     <div class="controls">
-      <span class="axis-label">wght</span>
+      <span class="axis-label">Weight</span>
       <input type="range" id="wght" min="100" max="900" value="400" step="100">
       <span class="display" id="wghtVal">400</span>
     </div>
-    <div id="axisDemo" class="bars p-categoricalVF" style="font-variation-settings: 'wdth' 100, 'wght' 400;">
+    <div class="controls">
+      <span class="axis-label">Radius</span>
+      <input type="range" id="rad" min="0" max="210" value="0" step="10">
+      <span class="display" id="radVal">0</span>
+    </div>
+    <div id="axisDemo" class="bars p-categoricalVF" style="font-variation-settings: 'wdth' 100, 'wght' 400, 'RADI' 0;">
       <div class="row"><span class="label">single</span><span>{h:65}</span></div>
       <div class="row"><span class="label">stacked</span><span>{h:25,15,20}</span></div>
     </div>
@@ -452,7 +457,7 @@ pre.code {
     <h2>Usage</h2>
     <pre class="code">@font-face {
   font-family: 'ProgressType';
-  src: url('ProgressType[wdth,wght].woff2') format('woff2');
+  src: url('ProgressType[RADI,wdth,wght].woff2') format('woff2');
   font-weight: 100 900;
   font-stretch: 50% 150%;
 }
@@ -504,29 +509,40 @@ slider.addEventListener('input', update); update();
 
 const wdth = document.getElementById('wdth');
 const wght = document.getElementById('wght');
+const rad = document.getElementById('rad');
 const wdthVal = document.getElementById('wdthVal');
 const wghtVal = document.getElementById('wghtVal');
+const radVal = document.getElementById('radVal');
 const axisDemo = document.getElementById('axisDemo');
+function axisSettings() {
+  return `'wdth' ${wdth.value}, 'wght' ${wght.value}, 'RADI' ${rad.value}`;
+}
 const updateAxes = rafThrottle(() => {
   wdthVal.textContent = wdth.value;
   wghtVal.textContent = wght.value;
-  axisDemo.style.fontVariationSettings = `'wdth' ${wdth.value}, 'wght' ${wght.value}`;
+  radVal.textContent = rad.value;
+  axisDemo.style.fontVariationSettings = axisSettings();
 });
 wdth.addEventListener('input', updateAxes);
 wght.addEventListener('input', updateAxes);
 
-// On release, snap to the final value once with no axis change pending,
-// then clear the inline style for ~1.5s of idle time so the GPU font cache
-// can evict transient variation tuples (mitigates Mozilla 1495661-style
-// per-instance accumulation observed in Chromium too).
+// rad combines with wdth+wght into 11×9×22 ≈ 2k possible variation tuples;
+// updating live during drag triggers Chromium STATUS_BREAKPOINT crashes
+// (heap corruption from rapid font-variation-settings churn). Update only
+// on commit (release / arrow-key change), and live-update just the value
+// label so the user can still see what they're aiming at.
+const updateRadLabel = rafThrottle(() => { radVal.textContent = rad.value; });
+rad.addEventListener('input', updateRadLabel);
+rad.addEventListener('change', updateAxes);
+
+// On release, snap to the final value once with no axis change pending.
 function snapAxes(e) {
-  // Force a final, canonical update with the slider's resting value.
-  axisDemo.style.fontVariationSettings = `'wdth' ${wdth.value}, 'wght' ${wght.value}`;
+  axisDemo.style.fontVariationSettings = axisSettings();
 }
-wdth.addEventListener('pointerup', snapAxes);
-wght.addEventListener('pointerup', snapAxes);
-wdth.addEventListener('change', snapAxes);
-wght.addEventListener('change', snapAxes);
+[wdth, wght].forEach(el => {
+  el.addEventListener('pointerup', snapAxes);
+  el.addEventListener('change', snapAxes);
+});
 
 updateAxes();
 </script>

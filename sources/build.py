@@ -78,7 +78,8 @@ def main():
     print("=" * 50)
 
     axes_config = [
-        ("wdth", "Width",  50, 100, 150),
+        ("RADI", "Radius",   0,   0, 210),
+        ("wdth", "Width",   50, 100, 150),
         ("wght", "Weight", 100, 400, 900),
     ]
 
@@ -86,11 +87,11 @@ def main():
     color_layers = {**colr_layers_h(), **colr_layers_v()}
 
     masters = []
-    for i, (wdth, wght, h_w, h_b, v_w, v_b) in enumerate(AXIS_MASTERS):
-        params = params_for_master(h_w, h_b, v_w, v_b)
-        print(f"  Building master {i+1}/{len(AXIS_MASTERS)} (wdth={wdth}, wght={wght})...")
+    for i, (wdth, wght, rad, h_w, h_b, h_r, v_w, v_b, v_r) in enumerate(AXIS_MASTERS):
+        params = params_for_master(h_w, h_b, h_r, v_w, v_b, v_r)
+        print(f"  Building master {i+1}/{len(AXIS_MASTERS)} (wdth={wdth}, wght={wght}, RAD={rad})...")
         master_font = _build_master(params, feature_code, color_layers)
-        masters.append((master_font, {"Width": wdth, "Weight": wght}))
+        masters.append((master_font, {"Width": wdth, "Weight": wght, "Radius": rad}))
 
     glyph_count = len(masters[0][0].getGlyphOrder())
     print(f"  Glyphs per master: {glyph_count}")
@@ -104,7 +105,7 @@ def main():
     vf = build_variable_font(masters, axes_config, fvar_instances)
 
     print(f"  Exporting variable font...")
-    export_font(vf, variable_dir, f"{FAMILY_NAME}[wdth,wght]")
+    export_font(vf, variable_dir, f"{FAMILY_NAME}[RADI,wdth,wght]")
 
     print(f"  Exporting static instances...")
     for style_name, wdth, wght in NAMED_INSTANCES:

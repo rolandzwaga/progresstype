@@ -4,7 +4,12 @@ Same structure as progress_h, parameterized via FontParams.
 Fill grows upward from the bottom of the inner area.
 """
 
+import math
+
 from sources.config import FontParams
+
+
+_ARC_N = 8  # polyline segments per quarter-arc; must match across masters
 
 
 def _rect(pen, x0, y0, x1, y1):
@@ -15,36 +20,75 @@ def _rect(pen, x0, y0, x1, y1):
     pen.closePath()
 
 
+def _arc_intermediate(cx, cy, r, start_deg, end_deg, n=_ARC_N):
+    for i in range(1, n):
+        t = i / n
+        theta = math.radians(start_deg + t * (end_deg - start_deg))
+        yield (cx + r * math.cos(theta), cy + r * math.sin(theta))
+
+
 def _track_metrics(p):
     x0 = p.v_bar_lead
     y0 = p.v_bar_baseline
     x1 = p.v_bar_lead + (p.v_bar_width - p.v_bar_lead - p.v_bar_trail)
     y1 = p.v_bar_baseline + p.v_bar_height
 
-    fx0 = x0 + p.v_bar_border + p.v_bar_padding
-    fy0 = y0 + p.v_bar_border + p.v_bar_padding
-    fx1 = x1 - p.v_bar_border - p.v_bar_padding
-    fy1 = y1 - p.v_bar_border - p.v_bar_padding
+    fx0 = x0 + p.v_bar_border + p.v_bar_padding + p.v_bar_radius
+    fy0 = y0 + p.v_bar_border + p.v_bar_padding + p.v_bar_radius
+    fx1 = x1 - p.v_bar_border - p.v_bar_padding - p.v_bar_radius
+    fy1 = y1 - p.v_bar_border - p.v_bar_padding - p.v_bar_radius
 
     return (x0, y0, x1, y1), (fx0, fy0, fx1, fy1)
 
 
 def _draw_track(pen, p):
-    (x0, y0, x1, y1), _ = _track_metrics(p)
-    ix0 = x0 + p.v_bar_border
-    iy0 = y0 + p.v_bar_border
-    ix1 = x1 - p.v_bar_border
-    iy1 = y1 - p.v_bar_border
+    """Outer rounded rectangle CCW + inner rounded rectangle CW (hole).
 
-    pen.moveTo((x0, y0))
-    pen.lineTo((x1, y0))
-    pen.lineTo((x1, y1))
-    pen.lineTo((x0, y1))
+    At v_bar_radius=0 collapses to the original two nested rectangles.
+    """
+    (x0, y0, x1, y1), _ = _track_metrics(p)
+    R = p.v_bar_radius
+    border = p.v_bar_border
+    ir = max(R - border, 0)  # inner radius; clamped (interpolation acceptable for our masters)
+
+    # Outer outline, CCW: bottom edge → bot-right arc → right → top-right arc → top → top-left arc → left → bot-left arc.
+    pen.moveTo((x0 + R, y0))
+    pen.lineTo((x1 - R, y0))
+    for pt in _arc_intermediate(x1 - R, y0 + R, R, 270, 360):
+        pen.lineTo(pt)
+    pen.lineTo((x1, y0 + R))
+    pen.lineTo((x1, y1 - R))
+    for pt in _arc_intermediate(x1 - R, y1 - R, R, 0, 90):
+        pen.lineTo(pt)
+    pen.lineTo((x1 - R, y1))
+    pen.lineTo((x0 + R, y1))
+    for pt in _arc_intermediate(x0 + R, y1 - R, R, 90, 180):
+        pen.lineTo(pt)
+    pen.lineTo((x0, y1 - R))
+    pen.lineTo((x0, y0 + R))
+    for pt in _arc_intermediate(x0 + R, y0 + R, R, 180, 270):
+        pen.lineTo(pt)
     pen.closePath()
-    pen.moveTo((ix0, iy0))
-    pen.lineTo((ix0, iy1))
-    pen.lineTo((ix1, iy1))
-    pen.lineTo((ix1, iy0))
+
+    # Inner outline (hole), CW: opposite winding around concentric inner radius.
+    ix0, iy0 = x0 + border, y0 + border
+    ix1, iy1 = x1 - border, y1 - border
+    pen.moveTo((ix0 + ir, iy0))
+    for pt in _arc_intermediate(ix0 + ir, iy0 + ir, ir, 270, 180):
+        pen.lineTo(pt)
+    pen.lineTo((ix0, iy0 + ir))
+    pen.lineTo((ix0, iy1 - ir))
+    for pt in _arc_intermediate(ix0 + ir, iy1 - ir, ir, 180, 90):
+        pen.lineTo(pt)
+    pen.lineTo((ix0 + ir, iy1))
+    pen.lineTo((ix1 - ir, iy1))
+    for pt in _arc_intermediate(ix1 - ir, iy1 - ir, ir, 90, 0):
+        pen.lineTo(pt)
+    pen.lineTo((ix1, iy1 - ir))
+    pen.lineTo((ix1, iy0 + ir))
+    for pt in _arc_intermediate(ix1 - ir, iy0 + ir, ir, 0, -90):
+        pen.lineTo(pt)
+    pen.lineTo((ix1 - ir, iy0))
     pen.closePath()
 
 

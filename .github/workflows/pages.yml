@@ -47,10 +47,10 @@ jobs:
 
           # Rewrite the two @font-face srcs to point at the flat release-asset
           # filenames now staged under fonts/. The in-page code-example block at
-          # ~line 445 has no "../" prefix and is left untouched.
+          # ~line 455 has no "../" prefix and is left untouched.
           sed -i \
             -e 's|\.\./fonts/webfonts/ProgressType-Regular\.woff2|fonts/ProgressType-Regular.woff2|' \
-            -e 's|\.\./fonts/variable/ProgressType\[wdth,wght\]\.woff2|fonts/ProgressType-VF.woff2|' \
+            -e 's|\.\./fonts/variable/ProgressType\[RADI,wdth,wght\]\.woff2|fonts/ProgressType-VF.woff2|' \
             _site/index.html
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

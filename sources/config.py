@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-FONT_VERSION = "0.2.0"
+FONT_VERSION = "0.3.0"
 
 UPM = 1000
 ASCENDER = 800
@@ -30,7 +30,9 @@ MAX_SEGMENTS = 8
 class FontParams:
     """Per-master parameters for the bar geometry.
 
-    wdth axis controls the long dimension; wght controls the track border thickness.
+    wdth axis controls the long dimension; wght controls the track border
+    thickness; RAD axis controls outer-corner radius (0 = square, half the bar
+    height = pill).
     """
     h_bar_width: int = 2400
     h_bar_height: int = 420
@@ -39,6 +41,7 @@ class FontParams:
     h_bar_padding: int = 0       # 0 = fills extend right up to the borders
     h_bar_lead: int = 60
     h_bar_trail: int = 60
+    h_bar_radius: int = 0        # outer-corner radius for the bar's left/right ends
 
     v_bar_width: int = 460
     v_bar_height: int = 900
@@ -47,49 +50,70 @@ class FontParams:
     v_bar_padding: int = 0
     v_bar_lead: int = 40
     v_bar_trail: int = 40
+    v_bar_radius: int = 0        # outer-corner radius for the bar's top/bottom ends
 
     @property
     def h_inner_width(self):
-        """Inner usable area width for fills (excluding borders + padding + lead/trail)."""
+        """Inner usable area width for fills (excluding borders + padding + lead/trail + corner radii)."""
         return (self.h_bar_width
                 - self.h_bar_lead - self.h_bar_trail
                 - 2 * self.h_bar_border
-                - 2 * self.h_bar_padding)
+                - 2 * self.h_bar_padding
+                - 2 * self.h_bar_radius)
 
     @property
     def h_open_advance(self):
-        """Advance width of the opener glyph: lead + border + padding."""
-        return self.h_bar_lead + self.h_bar_border + self.h_bar_padding
+        """Advance width of the opener glyph: lead + border + padding + radius."""
+        return self.h_bar_lead + self.h_bar_border + self.h_bar_padding + self.h_bar_radius
 
     @property
     def h_close_advance(self):
-        """Advance width of the closer glyph: padding + border + trail."""
-        return self.h_bar_padding + self.h_bar_border + self.h_bar_trail
+        """Advance width of the closer glyph: radius + padding + border + trail."""
+        return self.h_bar_radius + self.h_bar_padding + self.h_bar_border + self.h_bar_trail
 
 
 # Variable font axis masters
-# (wdth, wght, h_bar_width, h_bar_border, v_bar_width, v_bar_border)
+# (wdth, wght, RAD, h_bar_width, h_bar_border, h_bar_radius, v_bar_width, v_bar_border, v_bar_radius)
+# RAD axis: 0 = square corners, 210 = pill (half h_bar_height = 420/2).
+# At max RAD the vertical bar's pill radius scales with wdth (it's half of the drawn
+# bar width = (v_bar_width - lead - trail)/2): 75 at wdth=50, 190 at wdth=100, 305 at wdth=150.
 AXIS_MASTERS = [
-    (100, 400,  2400,  50,  460,  50),    # Default (Regular)
-    ( 50, 400,  1200,  50,  230,  50),
-    (150, 400,  3600,  50,  690,  50),
+    # Square corners (RAD=0)
+    (100, 400,   0,  2400,  50,   0,  460,  50,   0),    # Regular
+    ( 50, 400,   0,  1200,  50,   0,  230,  50,   0),
+    (150, 400,   0,  3600,  50,   0,  690,  50,   0),
 
-    (100, 100,  2400,  18,  460,  18),    # Thin
-    ( 50, 100,  1200,  18,  230,  18),
-    (150, 100,  3600,  18,  690,  18),
+    (100, 100,   0,  2400,  18,   0,  460,  18,   0),    # Thin
+    ( 50, 100,   0,  1200,  18,   0,  230,  18,   0),
+    (150, 100,   0,  3600,  18,   0,  690,  18,   0),
 
-    (100, 900,  2400, 110,  460, 110),    # Black
-    ( 50, 900,  1200, 110,  230, 110),
-    (150, 900,  3600, 110,  690, 110),
+    (100, 900,   0,  2400, 110,   0,  460, 110,   0),    # Black
+    ( 50, 900,   0,  1200, 110,   0,  230, 110,   0),
+    (150, 900,   0,  3600, 110,   0,  690, 110,   0),
+
+    # Pill corners (RAD=210). v_bar_radius scales per-wdth to half the drawn width.
+    (100, 400, 210,  2400,  50, 210,  460,  50, 190),
+    ( 50, 400, 210,  1200,  50, 210,  230,  50,  75),
+    (150, 400, 210,  3600,  50, 210,  690,  50, 305),
+
+    (100, 100, 210,  2400,  18, 210,  460,  18, 190),
+    ( 50, 100, 210,  1200,  18, 210,  230,  18,  75),
+    (150, 100, 210,  3600,  18, 210,  690,  18, 305),
+
+    (100, 900, 210,  2400, 110, 210,  460, 110, 190),
+    ( 50, 900, 210,  1200, 110, 210,  230, 110,  75),
+    (150, 900, 210,  3600, 110, 210,  690, 110, 305),
 ]
 
 
-def params_for_master(h_w, h_b, v_w, v_b):
+def params_for_master(h_w, h_b, h_r, v_w, v_b, v_r):
     return FontParams(
         h_bar_width=h_w,
         h_bar_border=h_b,
+        h_bar_radius=h_r,
         v_bar_width=v_w,
         v_bar_border=v_b,
+        v_bar_radius=v_r,
     )
 
 

@@ -28,7 +28,14 @@ GSUB pipeline (in calt):
   6. close: } in bar context → prog_h_close
 """
 
+import math
+
 from sources.config import FontParams, MAX_SEGMENTS
+
+
+# Polyline segments per quarter-arc. Higher = smoother, but every master must
+# carry the same point count, so changing this is a master-incompatible change.
+_ARC_N = 8
 
 
 def _rect(pen, x0, y0, x1, y1):
@@ -37,6 +44,19 @@ def _rect(pen, x0, y0, x1, y1):
     pen.lineTo((x1, y1))
     pen.lineTo((x0, y1))
     pen.closePath()
+
+
+def _arc_intermediate(cx, cy, r, start_deg, end_deg, n=_ARC_N):
+    """Yield (n-1) intermediate points along the arc, excluding endpoints.
+
+    At r=0 every yielded point is (cx, cy) — coincident points are valid in
+    TrueType outlines and let the same point structure represent both the
+    square (r=0) and rounded (r>0) masters for varLib interpolation.
+    """
+    for i in range(1, n):
+        t = i / n
+        theta = math.radians(start_deg + t * (end_deg - start_deg))
+        yield (cx + r * math.cos(theta), cy + r * math.sin(theta))
 
 
 def _y_bounds(p):
@@ -66,42 +86,66 @@ _SEG_OVERLAP = 8
 # Drawing functions
 # ---------------------------------------------------------------------------
 
-def _draw_open_track(pen, p):
-    """Opener track drawing: left vertical border + opener-width top/bottom strips.
+def _draw_left_endcap(pen, p, outer_left, inner_right):
+    """Draw a rounded left end-cap as a single closed contour.
 
-    The left vertical border is extended right by _SEG_OVERLAP so the first
-    segment's drawing overdraws any AA seam at the opener-segment boundary.
+    outer_left: x of the bar's outer left edge (where rounded curve reaches its leftmost extent).
+    inner_right: x where the end-cap dovetails with strips (its rightmost edge).
+
+    At R=0 the contour collapses to a rectangle from outer_left to inner_right.
     """
-    yob, yot, yib, yit = _y_bounds(p)
+    yob, yot, _yib, _yit = _y_bounds(p)
+    R = p.h_bar_radius
+    pen.moveTo((inner_right, yot))
+    pen.lineTo((outer_left + R, yot))
+    for pt in _arc_intermediate(outer_left + R, yot - R, R, 90, 180):
+        pen.lineTo(pt)
+    pen.lineTo((outer_left, yot - R))
+    pen.lineTo((outer_left, yob + R))
+    for pt in _arc_intermediate(outer_left + R, yob + R, R, 180, 270):
+        pen.lineTo(pt)
+    pen.lineTo((outer_left + R, yob))
+    pen.lineTo((inner_right, yob))
+    pen.closePath()
 
-    # Left vertical border, extended right by overlap.
-    lx0 = p.h_bar_lead
-    lx1 = p.h_bar_lead + p.h_bar_border + _SEG_OVERLAP
-    _rect(pen, lx0, yob, lx1, yot)
 
-    # Top/bottom strip portions for any padding region (zero when padding=0).
-    sx0 = p.h_bar_lead + p.h_bar_border
-    sx1 = p.h_open_advance + _SEG_OVERLAP
-    if sx1 > sx0:
-        _rect(pen, sx0, yit, sx1, yot)  # top strip
-        _rect(pen, sx0, yob, sx1, yib)  # bottom strip
+def _draw_right_endcap(pen, p, inner_left, outer_right):
+    """Draw a rounded right end-cap as a single closed contour. Mirror of left."""
+    yob, yot, _yib, _yit = _y_bounds(p)
+    R = p.h_bar_radius
+    pen.moveTo((inner_left, yob))
+    pen.lineTo((outer_right - R, yob))
+    for pt in _arc_intermediate(outer_right - R, yob + R, R, 270, 360):
+        pen.lineTo(pt)
+    pen.lineTo((outer_right, yob + R))
+    pen.lineTo((outer_right, yot - R))
+    for pt in _arc_intermediate(outer_right - R, yot - R, R, 0, 90):
+        pen.lineTo(pt)
+    pen.lineTo((outer_right - R, yot))
+    pen.lineTo((inner_left, yot))
+    pen.closePath()
+
+
+def _draw_open_track(pen, p):
+    """Opener track drawing: rounded left end of the bar.
+
+    The right edge is extended by _SEG_OVERLAP so the next glyph overdraws any
+    AA seam at the boundary.
+    """
+    _draw_left_endcap(
+        pen, p,
+        outer_left=p.h_bar_lead,
+        inner_right=p.h_bar_lead + p.h_bar_border + p.h_bar_radius + _SEG_OVERLAP,
+    )
 
 
 def _draw_close_track(pen, p):
-    """Closer track drawing: closer-width top/bottom strips + right vertical border."""
-    yob, yot, yib, yit = _y_bounds(p)
-
-    # The closer's local x-coordinates run from 0 to h_close_advance
-    # Top + bottom strips from x=0 to x=padding+border
-    strip_end = p.h_bar_padding + p.h_bar_border
-    if strip_end > 0:
-        _rect(pen, 0, yit, strip_end, yot)
-        _rect(pen, 0, yob, strip_end, yib)
-
-    # Right vertical border at x=padding..padding+border
-    rx0 = p.h_bar_padding
-    rx1 = p.h_bar_padding + p.h_bar_border
-    _rect(pen, rx0, yob, rx1, yot)
+    """Closer track drawing: rounded right end of the bar (closer-local coords)."""
+    _draw_right_endcap(
+        pen, p,
+        inner_left=-_SEG_OVERLAP,
+        outer_right=p.h_bar_padding + p.h_bar_border + p.h_bar_radius,
+    )
 
 
 def _draw_strip(pen, p, pct):
@@ -148,32 +192,42 @@ def _draw_seg_base(pen, p, pct):
 # ---------------------------------------------------------------------------
 
 def _full_inner_x(p):
-    """Return (x_inner_start, x_inner_end) within the full bar coordinate space."""
-    x0 = p.h_bar_lead + p.h_bar_border + p.h_bar_padding
-    x1 = p.h_bar_width - p.h_bar_trail - p.h_bar_border - p.h_bar_padding
+    """Return (x_inner_start, x_inner_end) within the full bar coordinate space.
+
+    Inset by h_bar_radius on both ends so the fill stays inside the rectangular
+    middle band; the rounded end-cap regions remain track-coloured.
+    """
+    x0 = p.h_bar_lead + p.h_bar_border + p.h_bar_padding + p.h_bar_radius
+    x1 = p.h_bar_width - p.h_bar_trail - p.h_bar_border - p.h_bar_padding - p.h_bar_radius
     return x0, x1
 
 
 def _draw_full_track(pen, p):
-    """Full-width track frame: left border, top + bottom strips, right border."""
+    """Full-width track frame: rounded left + right end-caps + middle strips.
+
+    Four contours per master, matching the original 4-rectangle structure so
+    varLib has a consistent contour count across square (R=0) and pill (R=Rmax)
+    masters.
+    """
     yob, yot, yib, yit = _y_bounds(p)
+    R = p.h_bar_radius
+    border = p.h_bar_border
 
-    # Left vertical border
-    lx0 = p.h_bar_lead
-    lx1 = p.h_bar_lead + p.h_bar_border
-    _rect(pen, lx0, yob, lx1, yot)
+    # End-caps absorb the original left/right border rectangles plus the
+    # rounded corner extension out to width = border + R.
+    left_endcap_right = p.h_bar_lead + border + R
+    right_endcap_left = p.h_bar_width - p.h_bar_trail - border - R
 
-    # Right vertical border
-    rx0 = p.h_bar_width - p.h_bar_trail - p.h_bar_border
-    rx1 = p.h_bar_width - p.h_bar_trail
-    _rect(pen, rx0, yob, rx1, yot)
+    _draw_left_endcap(pen, p, outer_left=p.h_bar_lead, inner_right=left_endcap_right)
+    _draw_right_endcap(pen, p, inner_left=right_endcap_left,
+                       outer_right=p.h_bar_width - p.h_bar_trail)
 
-    # Top strip + bottom strip across the full inner span (between the borders)
-    sx0 = lx1
-    sx1 = rx0
+    # Middle top + bottom strips between the end-caps.
+    sx0 = left_endcap_right
+    sx1 = right_endcap_left
     if sx1 > sx0:
-        _rect(pen, sx0, yit, sx1, yot)  # top
-        _rect(pen, sx0, yob, sx1, yib)  # bottom
+        _rect(pen, sx0, yit, sx1, yot)
+        _rect(pen, sx0, yob, sx1, yib)
 
 
 def _draw_full_fill(pen, p, pct):

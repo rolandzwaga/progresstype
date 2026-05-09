@@ -33,8 +33,8 @@ jobs:
           cp fonts/ttf/*.ttf release-assets/
           cp fonts/webfonts/*.woff2 release-assets/
           # Variable font: copy to friendlier names (GitHub mangles [ ] , in asset names).
-          cp "fonts/variable/ProgressType[wdth,wght].ttf"   release-assets/ProgressType-VF.ttf
-          cp "fonts/variable/ProgressType[wdth,wght].woff2" release-assets/ProgressType-VF.woff2
+          cp "fonts/variable/ProgressType[RADI,wdth,wght].ttf"   release-assets/ProgressType-VF.ttf
+          cp "fonts/variable/ProgressType[RADI,wdth,wght].woff2" release-assets/ProgressType-VF.woff2
           # Also bundle the entire fonts/ tree as a zip for convenience.
           ( cd fonts && zip -r "../release-assets/ProgressType-${TAG}.zip" . )
           ls -la release-assets/
