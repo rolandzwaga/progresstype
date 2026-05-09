@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+
+# Generated specimen (regenerable from build)
+dev/specimen.svg
+
+# Build outputs (reproducible via `make build`)
+fonts/variable/
+fonts/ttf/
+fonts/webfonts/

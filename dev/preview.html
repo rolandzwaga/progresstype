@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Datatype Progress — specimen</title>
+<style>
+@font-face {
+  font-family: 'DatatypeProgress';
+  src: url('../fonts/variable/DatatypeProgress[wdth,wght].woff2') format('woff2');
+  font-weight: 100 900;
+  font-stretch: 50% 150%;
+}
+
+@font-palette-values --sequential  { font-family: 'DatatypeProgress'; base-palette: 0; }
+@font-palette-values --rag         { font-family: 'DatatypeProgress'; base-palette: 1; }
+@font-palette-values --categorical { font-family: 'DatatypeProgress'; base-palette: 2; }
+@font-palette-values --ocean       { font-family: 'DatatypeProgress'; base-palette: 3; }
+@font-palette-values --mono        { font-family: 'DatatypeProgress'; base-palette: 4; }
+
+:root {
+  --bg: #0b0d12;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --card: #11141b;
+  --border: #1f2937;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  padding: 48px 32px;
+}
+
+main { max-width: 920px; margin: 0 auto; }
+
+h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.02em; }
+.subtitle { color: var(--muted); margin: 0 0 48px; }
+
+section {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+}
+
+h2 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.bars {
+  font-family: 'DatatypeProgress', monospace;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.bars .row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.bars .label, .bars .value {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.bars .label { min-width: 90px; }
+.bars .value { min-width: 54px; text-align: right; }
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.palette-card { text-align: center; }
+.palette-card .name {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.palette-card .swatch {
+  font-family: 'DatatypeProgress', monospace;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-size: 20px;
+  display: block;
+}
+
+.p-sequential  { font-palette: --sequential; }
+.p-rag         { font-palette: --rag; }
+.p-categorical { font-palette: --categorical; }
+.p-ocean       { font-palette: --ocean; }
+.p-mono        { font-palette: --mono; }
+
+.vertical-row {
+  font-family: 'DatatypeProgress', monospace;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-size: 64px;
+  letter-spacing: 4px;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+
+code.syntax {
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 13px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.controls input[type=range] { flex: 1; }
+.controls .display, .controls .axis-label {
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 80px;
+}
+
+#playground {
+  font-family: 'DatatypeProgress', monospace;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0;
+}
+
+pre.code {
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Datatype Progress</h1>
+  <p class="subtitle">An OpenType variable font that renders <code class="syntax">{h:25,10,15}</code> as a stacked horizontal progress bar — and <code class="syntax">{v:75}</code> as a vertical one.</p>
+
+  <section>
+    <h2>Single-segment</h2>
+    <div class="bars p-categorical">
+      <div class="row"><span class="label">CPU</span><span>{h:23}</span><span class="value">23%</span></div>
+      <div class="row"><span class="label">Memory</span><span>{h:67}</span><span class="value">67%</span></div>
+      <div class="row"><span class="label">Disk</span><span>{h:91}</span><span class="value">91%</span></div>
+      <div class="row"><span class="label">Network</span><span>{h:8}</span><span class="value">8%</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Stacked multi-segment</h2>
+    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
+      Up to 8 segments; each segment's color is determined by its position in the list.
+    </p>
+    <div class="bars p-categorical">
+      <div class="row"><span class="label">2 segments</span><span>{h:30,40}</span><span class="value">70%</span></div>
+      <div class="row"><span class="label">3 segments</span><span>{h:25,10,15}</span><span class="value">50%</span></div>
+      <div class="row"><span class="label">4 segments</span><span>{h:20,15,10,25}</span><span class="value">70%</span></div>
+      <div class="row"><span class="label">8 segments</span><span>{h:10,10,10,10,10,10,10,10}</span><span class="value">80%</span></div>
+    </div>
+
+    <h2 style="margin-top: 24px;">Same data, RAG palette</h2>
+    <div class="bars p-rag">
+      <div class="row"><span class="label">Status</span><span>{h:45,30,25}</span><span class="value">on track / at risk / blocked</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Palettes</h2>
+    <div class="palette-grid">
+      <div class="palette-card"><div class="name">sequential</div><span class="swatch p-sequential">{h:12,12,12,12,12,12,12,12}</span></div>
+      <div class="palette-card"><div class="name">rag</div><span class="swatch p-rag">{h:33,33,34}</span></div>
+      <div class="palette-card"><div class="name">categorical</div><span class="swatch p-categorical">{h:12,12,12,12,12,12,12,12}</span></div>
+      <div class="palette-card"><div class="name">ocean</div><span class="swatch p-ocean">{h:12,12,12,12,12,12,12,12}</span></div>
+      <div class="palette-card"><div class="name">mono</div><span class="swatch p-mono">{h:65}</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Vertical (sparkline-style)</h2>
+    <div class="vertical-row p-categorical">
+      {v:10}{v:25}{v:40}{v:55}{v:70}{v:85}{v:100}{v:80}{v:60}{v:45}{v:30}{v:15}
+    </div>
+    <p style="color: var(--muted); font-size: 12px; margin: 8px 0 0;">Vertical bars are single-segment only.</p>
+  </section>
+
+  <section>
+    <h2>Variable axes — Width & Weight</h2>
+    <div class="controls">
+      <span class="axis-label">wdth</span>
+      <input type="range" id="wdth" min="50" max="150" value="100">
+      <span class="display" id="wdthVal">100</span>
+    </div>
+    <div class="controls">
+      <span class="axis-label">wght</span>
+      <input type="range" id="wght" min="100" max="900" value="400" step="50">
+      <span class="display" id="wghtVal">400</span>
+    </div>
+    <div id="axisDemo" class="bars p-categorical" style="font-variation-settings: 'wdth' 100, 'wght' 400;">
+      <div class="row"><span class="label">single</span><span>{h:65}</span></div>
+      <div class="row"><span class="label">stacked</span><span>{h:25,15,20}</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Playground</h2>
+    <div class="controls">
+      <input type="range" id="pct" min="0" max="100" value="50">
+      <span class="display" id="display">{h:50}</span>
+    </div>
+    <div id="playground" class="p-categorical">
+      <span id="hbar">{h:50}</span>
+      <span id="vbar">{v:50}</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Usage</h2>
+    <pre class="code">@font-face {
+  font-family: 'DatatypeProgress';
+  src: url('DatatypeProgress[wdth,wght].woff2') format('woff2');
+  font-weight: 100 900;
+  font-stretch: 50% 150%;
+}
+
+@font-palette-values --rag {
+  font-family: 'DatatypeProgress';
+  base-palette: 1;       /* 0=sequential, 1=rag, 2=categorical, 3=ocean, 4=mono */
+}
+
+.bar {
+  font-family: 'DatatypeProgress', monospace;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-palette: --rag;
+}
+
+&lt;p class="bar"&gt;Status: {h:45,30,25}&lt;/p&gt;</pre>
+  </section>
+</main>
+
+<script>
+const slider = document.getElementById('pct');
+const display = document.getElementById('display');
+const hbar = document.getElementById('hbar');
+const vbar = document.getElementById('vbar');
+function update() {
+  const v = slider.value;
+  display.textContent = '{h:' + v + '} {v:' + v + '}';
+  hbar.textContent = '{h:' + v + '}';
+  vbar.textContent = '{v:' + v + '}';
+}
+slider.addEventListener('input', update); update();
+
+const wdth = document.getElementById('wdth');
+const wght = document.getElementById('wght');
+const wdthVal = document.getElementById('wdthVal');
+const wghtVal = document.getElementById('wghtVal');
+const axisDemo = document.getElementById('axisDemo');
+function updateAxes() {
+  wdthVal.textContent = wdth.value;
+  wghtVal.textContent = wght.value;
+  axisDemo.style.fontVariationSettings = `'wdth' ${wdth.value}, 'wght' ${wght.value}`;
+}
+wdth.addEventListener('input', updateAxes);
+wght.addEventListener('input', updateAxes);
+updateAxes();
+</script>
+</body>
+</html>
