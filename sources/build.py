@@ -12,35 +12,23 @@ from sources.config import (
 )
 from sources.glyphs.base_imported import draw_base_glyphs
 from sources.glyphs.progress_h import (
-    draw_progress_h_glyphs, colr_layers_h,
-    generate_progress_h_feature_code, generate_progress_h_full_liga_code,
-    progress_h_calt_lookups,
+    draw_progress_h_glyphs, generate_progress_h_full_liga_code,
 )
 from sources.glyphs.progress_v import (
-    draw_progress_v_glyphs, colr_layers_v, generate_progress_v_feature_code,
+    draw_progress_v_glyphs, generate_progress_v_feature_code,
 )
 from sources.font_builder import (
-    build_font, build_variable_font, export_static_instance,
+    build_font, build_variable_font, export_static_instance, clean_static_glyphs,
 )
 from sources.export import export_font
 
 
 def _feature_code():
     h_full_fea = generate_progress_h_full_liga_code()
-    h_fea = generate_progress_h_feature_code()
     v_fea = generate_progress_v_feature_code()
-
-    # liga: direct ligatures for fixed-width single-segment {h:NN} and {v:NN}.
-    # calt: multi-stage pipeline for stacked horizontal {h:NN,MM,...}.
-    # The liga direct match is longer than the calt open ligature ({h:NN} vs {h:),
-    # so single-segment input always resolves to the fixed-width baked glyph.
-    h_calt_lookups = progress_h_calt_lookups()
-    h_calt_block = "\n".join(f"    lookup {name};" for name in h_calt_lookups)
 
     return f"""
 {h_full_fea}
-
-{h_fea}
 
 {v_fea}
 
@@ -48,14 +36,10 @@ feature liga {{
     lookup prog_h_full_liga;
     lookup prog_v_liga;
 }} liga;
-
-feature calt {{
-{h_calt_block}
-}} calt;
 """
 
 
-def _build_master(params, feature_code, color_layers):
+def _build_master(params, feature_code):
     glyph_data = {}
     draw_base_glyphs(glyph_data)
     draw_progress_h_glyphs(glyph_data, params)
@@ -63,7 +47,6 @@ def _build_master(params, feature_code, color_layers):
     return build_font(
         glyph_data=glyph_data,
         feature_code=feature_code,
-        color_layers=color_layers,
         family_name=FAMILY_NAME,
     )
 
@@ -84,13 +67,12 @@ def main():
     ]
 
     feature_code = _feature_code()
-    color_layers = {**colr_layers_h(), **colr_layers_v()}
 
     masters = []
     for i, (wdth, wght, rad, h_w, h_b, h_r, v_w, v_b, v_r) in enumerate(AXIS_MASTERS):
         params = params_for_master(h_w, h_b, h_r, v_w, v_b, v_r)
         print(f"  Building master {i+1}/{len(AXIS_MASTERS)} (wdth={wdth}, wght={wght}, RAD={rad})...")
-        master_font = _build_master(params, feature_code, color_layers)
+        master_font = _build_master(params, feature_code)
         masters.append((master_font, {"Width": wdth, "Weight": wght, "Radius": rad}))
 
     glyph_count = len(masters[0][0].getGlyphOrder())
@@ -111,13 +93,43 @@ def main():
     for style_name, wdth, wght in NAMED_INSTANCES:
         export_static_instance(
             vf,
-            location={"wght": wght, "wdth": wdth},
+            # Pin all three axes (including RADI=0) so the resulting font is
+            # fully static. Without pinning RADI the instancer leaves fvar/
+            # gvar/STAT/HVAR in place, which has been observed to crash
+            # Chrome's GPU COLR rasteriser during repaint.
+            location={"wght": wght, "wdth": wdth, "RADI": 0},
             output_dir=ttf_dir,
             basename=FAMILY_NAME,
             style_name=style_name,
             weight_class=wght,
             woff2_dir=woff2_dir,
         )
+
+    print(f"  Exporting radius variants (Regular @ wdth=100)...")
+    import copy
+    from fontTools.varLib.instancer import instantiateVariableFont
+    for variant_name, rad_value in [("Mid", 105), ("Pill", 210)]:
+        static = instantiateVariableFont(
+            copy.deepcopy(vf),
+            {"wght": 400, "wdth": 100, "RADI": rad_value},
+        )
+        clean_static_glyphs(static)
+        ps_name = f"{FAMILY_NAME}-{variant_name}"
+        full_name = f"{FAMILY_NAME} {variant_name}"
+        nt = static["name"]
+        nt.names = [r for r in nt.names if r.platformID != 1]
+        nt.setName(FAMILY_NAME, 1, 3, 1, 0x0409)
+        nt.setName(variant_name, 2, 3, 1, 0x0409)
+        nt.setName(full_name, 4, 3, 1, 0x0409)
+        nt.setName(ps_name, 6, 3, 1, 0x0409)
+        static["OS/2"].usWeightClass = 400
+        ttf_path = os.path.join(ttf_dir, f"{ps_name}.ttf")
+        static.save(ttf_path)
+        print(f"    {ttf_path}")
+        static.flavor = "woff2"
+        woff2_path = os.path.join(woff2_dir, f"{ps_name}.woff2")
+        static.save(woff2_path)
+        print(f"    {woff2_path}")
 
     elapsed = time.time() - start
     print(f"\nBuild complete in {elapsed:.1f}s")

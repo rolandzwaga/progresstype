@@ -39,18 +39,22 @@ jobs:
           cp dev/preview.html _site/index.html
           touch _site/.nojekyll
 
+          # Resolve the latest release tag — assets are suffixed with it for cache busting.
+          TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          echo "Using release tag: $TAG"
+
           # Pull the two woff2 files preview.html needs from the latest release.
-          gh release download --repo "$GITHUB_REPOSITORY" \
-            --pattern 'ProgressType-Regular.woff2' \
-            --pattern 'ProgressType-VF.woff2' \
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "ProgressType-Regular-${TAG}.woff2" \
+            --pattern "ProgressType-VF-${TAG}.woff2" \
             --dir _site/fonts/
 
-          # Rewrite the two @font-face srcs to point at the flat release-asset
+          # Rewrite the two @font-face srcs to point at the tag-suffixed asset
           # filenames now staged under fonts/. The in-page code-example block at
           # ~line 455 has no "../" prefix and is left untouched.
           sed -i \
-            -e 's|\.\./fonts/webfonts/ProgressType-Regular\.woff2|fonts/ProgressType-Regular.woff2|' \
-            -e 's|\.\./fonts/variable/ProgressType\[RADI,wdth,wght\]\.woff2|fonts/ProgressType-VF.woff2|' \
+            -e "s|\\.\\./fonts/webfonts/ProgressType-Regular\\.woff2|fonts/ProgressType-Regular-${TAG}.woff2|" \
+            -e "s|\\.\\./fonts/variable/ProgressType\\[RADI,wdth,wght\\]\\.woff2|fonts/ProgressType-VF-${TAG}.woff2|" \
             _site/index.html
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

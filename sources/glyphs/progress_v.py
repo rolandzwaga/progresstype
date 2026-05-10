@@ -4,12 +4,8 @@ Same structure as progress_h, parameterized via FontParams.
 Fill grows upward from the bottom of the inner area.
 """
 
-import math
-
 from sources.config import FontParams
-
-
-_ARC_N = 8  # polyline segments per quarter-arc; must match across masters
+from sources.glyphs.progress_h import _arc_qcurve_args
 
 
 def _rect(pen, x0, y0, x1, y1):
@@ -18,13 +14,6 @@ def _rect(pen, x0, y0, x1, y1):
     pen.lineTo((x1, y1))
     pen.lineTo((x0, y1))
     pen.closePath()
-
-
-def _arc_intermediate(cx, cy, r, start_deg, end_deg, n=_ARC_N):
-    for i in range(1, n):
-        t = i / n
-        theta = math.radians(start_deg + t * (end_deg - start_deg))
-        yield (cx + r * math.cos(theta), cy + r * math.sin(theta))
 
 
 def _track_metrics(p):
@@ -51,44 +40,36 @@ def _draw_track(pen, p):
     border = p.v_bar_border
     ir = max(R - border, 0)  # inner radius; clamped (interpolation acceptable for our masters)
 
-    # Outer outline, CCW: bottom edge → bot-right arc → right → top-right arc → top → top-left arc → left → bot-left arc.
-    pen.moveTo((x0 + R, y0))
+    # Outer outline, CCW. Each contour ends with an explicit lineTo back to
+    # moveTo so TTGlyphPen.closePath always pops one redundant point — this
+    # keeps point structure identical across masters even when pill radii
+    # cause the last arc end to naturally coincide with moveTo.
+    outer_start = (x0 + R, y0)
+    pen.moveTo(outer_start)
     pen.lineTo((x1 - R, y0))
-    for pt in _arc_intermediate(x1 - R, y0 + R, R, 270, 360):
-        pen.lineTo(pt)
-    pen.lineTo((x1, y0 + R))
+    pen.qCurveTo(*_arc_qcurve_args(x1 - R, y0 + R, R, 270, 360))
     pen.lineTo((x1, y1 - R))
-    for pt in _arc_intermediate(x1 - R, y1 - R, R, 0, 90):
-        pen.lineTo(pt)
-    pen.lineTo((x1 - R, y1))
+    pen.qCurveTo(*_arc_qcurve_args(x1 - R, y1 - R, R, 0, 90))
     pen.lineTo((x0 + R, y1))
-    for pt in _arc_intermediate(x0 + R, y1 - R, R, 90, 180):
-        pen.lineTo(pt)
-    pen.lineTo((x0, y1 - R))
+    pen.qCurveTo(*_arc_qcurve_args(x0 + R, y1 - R, R, 90, 180))
     pen.lineTo((x0, y0 + R))
-    for pt in _arc_intermediate(x0 + R, y0 + R, R, 180, 270):
-        pen.lineTo(pt)
+    pen.qCurveTo(*_arc_qcurve_args(x0 + R, y0 + R, R, 180, 270))
+    pen.lineTo(outer_start)
     pen.closePath()
 
     # Inner outline (hole), CW: opposite winding around concentric inner radius.
     ix0, iy0 = x0 + border, y0 + border
     ix1, iy1 = x1 - border, y1 - border
-    pen.moveTo((ix0 + ir, iy0))
-    for pt in _arc_intermediate(ix0 + ir, iy0 + ir, ir, 270, 180):
-        pen.lineTo(pt)
-    pen.lineTo((ix0, iy0 + ir))
+    inner_start = (ix0 + ir, iy0)
+    pen.moveTo(inner_start)
+    pen.qCurveTo(*_arc_qcurve_args(ix0 + ir, iy0 + ir, ir, 270, 180))
     pen.lineTo((ix0, iy1 - ir))
-    for pt in _arc_intermediate(ix0 + ir, iy1 - ir, ir, 180, 90):
-        pen.lineTo(pt)
-    pen.lineTo((ix0 + ir, iy1))
+    pen.qCurveTo(*_arc_qcurve_args(ix0 + ir, iy1 - ir, ir, 180, 90))
     pen.lineTo((ix1 - ir, iy1))
-    for pt in _arc_intermediate(ix1 - ir, iy1 - ir, ir, 90, 0):
-        pen.lineTo(pt)
-    pen.lineTo((ix1, iy1 - ir))
+    pen.qCurveTo(*_arc_qcurve_args(ix1 - ir, iy1 - ir, ir, 90, 0))
     pen.lineTo((ix1, iy0 + ir))
-    for pt in _arc_intermediate(ix1 - ir, iy0 + ir, ir, 0, -90):
-        pen.lineTo(pt)
-    pen.lineTo((ix1 - ir, iy0))
+    pen.qCurveTo(*_arc_qcurve_args(ix1 - ir, iy0 + ir, ir, 0, -90))
+    pen.lineTo(inner_start)
     pen.closePath()
 
 
@@ -107,30 +88,15 @@ def _draw_base(pen, p, pct):
 
 
 def draw_progress_v_glyphs(glyph_data, params=None):
+    """Add vertical progress bar glyphs (prog_v_0..prog_v_100)."""
     if params is None:
         params = FontParams()
     p = params
 
-    glyph_data["prog_v_track"] = (p.v_bar_width, lambda pen: _draw_track(pen, p))
-
     for pct in range(0, 101):
-        def make_fill(pct_=pct):
-            return lambda pen: _draw_fill(pen, p, pct_)
-        glyph_data[f"prog_v_fill_{pct}"] = (p.v_bar_width, make_fill())
-
         def make_base(pct_=pct):
             return lambda pen: _draw_base(pen, p, pct_)
         glyph_data[f"prog_v_{pct}"] = (p.v_bar_width, make_base())
-
-
-def colr_layers_v():
-    return {
-        f"prog_v_{pct}": [
-            ("prog_v_track", 0),
-            (f"prog_v_fill_{pct}", 1),
-        ]
-        for pct in range(0, 101)
-    }
 
 
 def generate_progress_v_feature_code():

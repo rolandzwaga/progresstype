@@ -1,9 +1,15 @@
-"""Font assembly with COLR/CPAL color support and variable axes.
+"""Font assembly: monochrome TrueType outlines + variable axes.
 
 Builds:
-- Static masters (build_font) — TTF with COLR/CPAL
+- Static masters (build_font) — TTF (monochrome, foreground-coloured via CSS)
 - Variable font (build_variable_font) — merges masters via varLib
 - Static instances (export_static_instance) — pinned slices of the VF
+
+NOTE: COLR/CPAL was removed because Chrome's Skia + DirectWrite GPU
+rasterisation path on Windows is unreliable for COLR fonts (intermittent
+"Aw, snap" renderer crashes during scroll/idle repaints, stable in software
+rendering and in Firefox). Bars are rendered monochrome and tinted via CSS
+`color`, matching the architecture of the Datatype font.
 """
 
 import copy
@@ -23,13 +29,7 @@ from sources.config import (
     UPM, FAMILY_NAME, REGULAR_STYLE, FONT_VERSION,
     CAP_HEIGHT, X_HEIGHT,
     TYPO_ASCENDER, TYPO_DESCENDER, WIN_ASCENT, WIN_DESCENT,
-    PALETTES,
 )
-
-
-def _rgba_to_floats(rgba):
-    r, g, b, a = rgba
-    return (r / 255.0, g / 255.0, b / 255.0, a / 255.0)
 
 
 def _font_revision_float():
@@ -37,14 +37,13 @@ def _font_revision_float():
     return float(f"{_major}.{_minor}")
 
 
-def build_font(glyph_data, feature_code, color_layers,
+def build_font(glyph_data, feature_code,
                style=REGULAR_STYLE, family_name=FAMILY_NAME):
-    """Build one static master TTF with COLR/CPAL.
+    """Build one static master TTF (monochrome — no COLR/CPAL).
 
     Args:
         glyph_data: dict {glyph_name: (advance_width, draw_func_or_None)}
         feature_code: OpenType feature code string
-        color_layers: dict {base_glyph: [(layer_glyph, palette_idx), ...]}
     """
     if ".notdef" not in glyph_data:
         raise ValueError(".notdef glyph is required")
@@ -134,16 +133,12 @@ def build_font(glyph_data, feature_code, color_layers,
     font["gasp"] = gasp
     font["post"].isFixedPitch = 0
 
-    # CPAL — each palette is (name, [list of RGBA tuples])
-    palette_labels = []
-    palettes_floats = []
-    for pal_name, entries in PALETTES:
-        palette_labels.append(pal_name)
-        palettes_floats.append([_rgba_to_floats(c) for c in entries])
-    fb.setupCPAL(palettes_floats, paletteLabels=palette_labels)
-
-    # COLR v0
-    fb.setupCOLR(color_layers)
+    # COLR/CPAL intentionally NOT added — Chrome's Skia + DirectWrite GPU
+    # rasteriser crashes intermittently on COLR fonts (skia issue 338390594
+    # and Mozilla bug 1933050 document the broader Skia+DirectWrite COLR
+    # fragility). Bars render via the monochrome base glyph outlines
+    # (_draw_*_base) which include track frame + fill drawn together in
+    # foreground colour.
 
     # name table — strip Mac platform records
     name_table = font["name"]
@@ -233,10 +228,76 @@ def build_variable_font(master_fonts, axes_config, named_instances=None):
     return vf
 
 
+def clean_static_glyphs(static):
+    """Strip degenerate outline operations inherited from the variable font's
+    coincident-point compatibility tricks (arc points collapsing onto corners
+    at RADI=0). Also drop residual variable-font tables (STAT) that
+    instantiateVariableFont leaves behind even when all axes are pinned.
+
+    Filters out:
+      - lineTo segments of zero length (start == end)
+      - qCurveTo where every off-curve and the on-curve endpoint all coincide
+        with the pen's current point (a no-op curve at RADI=0)
+
+    NOTE: skia-pathops `removeOverlaps` is intentionally NOT run here. It
+    corrupts our pill-shaped tracks: the zero-length top/bottom edges plus
+    quadratic-Bézier arcs confuse its Op pipeline, producing flattened
+    rectangles instead of properly rounded ends.
+    """
+    # Drop STAT — vestigial style-attribute metadata pointing at axes that no
+    # longer exist on this static instance. Chrome/Skia path-throws on a few
+    # COLR + variable-table-leftover combinations.
+    if "STAT" in static:
+        del static["STAT"]
+    from fontTools.pens.recordingPen import RecordingPen
+    from fontTools.pens.ttGlyphPen import TTGlyphPen
+
+    glyph_set = static.getGlyphSet()
+    glyf = static["glyf"]
+    for name in static.getGlyphOrder():
+        glyph = glyf[name]
+        if glyph.numberOfContours <= 0:
+            continue
+        rec = RecordingPen()
+        glyph_set[name].draw(rec)
+
+        pen = TTGlyphPen(None)
+        last_pt = None
+        changed = False
+        for op, args in rec.value:
+            if op == "moveTo":
+                pen.moveTo(args[0])
+                last_pt = args[0]
+            elif op == "lineTo":
+                if args[0] == last_pt:
+                    changed = True
+                    continue
+                pen.lineTo(args[0])
+                last_pt = args[0]
+            elif op == "qCurveTo":
+                if last_pt is not None and all(pt == last_pt for pt in args):
+                    changed = True
+                    continue
+                pen.qCurveTo(*args)
+                last_pt = args[-1] if args else last_pt
+            elif op == "curveTo":
+                pen.curveTo(*args)
+                last_pt = args[-1] if args else last_pt
+            elif op == "closePath":
+                pen.closePath()
+                last_pt = None
+            elif op == "endPath":
+                pen.endPath()
+                last_pt = None
+        if changed:
+            glyf[name] = pen.glyph()
+
+
 def export_static_instance(vf, location, output_dir, basename, style_name,
                            weight_class, woff2_dir=None):
     """Export a static instance pinned at `location` from the variable font."""
     static = instantiateVariableFont(copy.deepcopy(vf), location)
+    clean_static_glyphs(static)
 
     _WGHT_NAMES = {
         100: "Thin", 200: "ExtraLight", 300: "Light", 400: "Regular",

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <title>ProgressType — demo</title>
 <style>
-/* Static font for nearly all of the page — no axis interpolation, far less
-   font-cache pressure. Avoids Chromium STATUS_BREAKPOINT crashes that occurred
-   when changing font-variation-settings with the variable font loaded. */
+/* All bars on the page use static-instance fonts — the variable font was
+   removed from the preview to avoid Chromium STATUS_BREAKPOINT crashes that
+   occurred during scroll/idle repaints when a custom RADI axis was active. */
 @font-face {
   font-family: 'ProgressType';
   src: url('../fonts/webfonts/ProgressType-Regular.woff2') format('woff2');
@@ -15,7 +15,20 @@
   font-display: block;
 }
 
-/* Variable font under a DIFFERENT family name, used only by the axis demo. */
+/* Mid-radius and pill-radius static instances for the radius demo section. */
+@font-face {
+  font-family: 'ProgressType-Mid';
+  src: url('../fonts/webfonts/ProgressType-Mid.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'ProgressType-Pill';
+  src: url('../fonts/webfonts/ProgressType-Pill.woff2') format('woff2');
+  font-display: block;
+}
+
+/* Variable font, isolated to the playground via a distinct family name so
+   only that one element exercises the variable-font code path. */
 @font-face {
   font-family: 'ProgressTypeVF';
   src: url('../fonts/variable/ProgressType[RADI,wdth,wght].woff2') format('woff2');
@@ -24,89 +37,13 @@
   font-display: block;
 }
 
-@font-palette-values --sequential  { font-family: 'ProgressType'; base-palette: 0; }
-@font-palette-values --rag         { font-family: 'ProgressType'; base-palette: 1; }
-@font-palette-values --categorical { font-family: 'ProgressType'; base-palette: 2; }
-@font-palette-values --ocean       { font-family: 'ProgressType'; base-palette: 3; }
-@font-palette-values --mono        { font-family: 'ProgressType'; base-palette: 4; }
+/* The font is monochrome — bars take their colour from CSS `color`. Each
+   `.p-*` class below is a colour preset.
 
-/* === Custom palettes via CSS — no font rebuild needed === */
-
-/* Brand override: indigo, pink, amber on a dark track */
-@font-palette-values --brand {
-  font-family: 'ProgressType';
-  base-palette: 2;
-  override-colors:
-    0 #1f2937,    /* track    */
-    1 #6366f1,    /* indigo-500 */
-    2 #ec4899,    /* pink-500   */
-    3 #f59e0b,    /* amber-500  */
-    4 #10b981,    /* emerald-500 */
-    5 #06b6d4,    /* cyan-500   */
-    6 #8b5cf6,    /* violet-500 */
-    7 #f97316,    /* orange-500 */
-    8 #84cc16;    /* lime-500   */
-}
-
-/* Earth tones */
-@font-palette-values --earth {
-  font-family: 'ProgressType';
-  base-palette: 0;
-  override-colors:
-    0 #44403c,    /* stone-700 (track) */
-    1 #a8a29e,    /* stone-400 */
-    2 #d6d3d1,    /* stone-300 */
-    3 #fde68a,    /* amber-200 */
-    4 #fbbf24,    /* amber-400 */
-    5 #d97706,    /* amber-600 */
-    6 #92400e,    /* amber-800 */
-    7 #78350f,    /* amber-900 */
-    8 #451a03;    /* amber-950 */
-}
-
-/* Pulled from CSS custom properties — connects to design tokens */
-:root {
-  --c-track: #2a2f3a;
-  --c-1: #38bdf8;
-  --c-2: #a78bfa;
-  --c-3: #f472b6;
-}
-@font-palette-values --tokens {
-  font-family: 'ProgressType';
-  base-palette: 0;
-  override-colors:
-    0 var(--c-track),
-    1 var(--c-1),
-    2 var(--c-2),
-    3 var(--c-3);
-}
-
-/* === Trailing-track palettes ===
-   Each "--padN" palette is the categorical palette with position N
-   overridden to the track color, so the Nth segment looks empty and
-   the bar appears fixed-width when the values sum to 100. */
-@font-palette-values --pad3 {
-  font-family: 'ProgressType'; base-palette: 2;
-  override-colors: 3 rgba(0,0,0,0);
-}
-@font-palette-values --pad4 {
-  font-family: 'ProgressType'; base-palette: 2;
-  override-colors: 4 rgba(0,0,0,0);
-}
-@font-palette-values --pad5 {
-  font-family: 'ProgressType'; base-palette: 2;
-  override-colors: 5 rgba(0,0,0,0);
-}
-@font-palette-values --pad8 {
-  font-family: 'ProgressType'; base-palette: 2;
-  override-colors: 8 rgba(0,0,0,0);
-}
-
-/* Mirror used by the axis demo (variable font family) */
-@font-palette-values --categoricalVF {
-  font-family: 'ProgressTypeVF';
-  base-palette: 2;
-}
+   Multi-segment bars (e.g. `{h:25,10,15}`) and COLR/CPAL were both removed
+   because Chrome's Skia + DirectWrite GPU rasteriser crashes intermittently
+   on COLR fonts on Windows (skia issue 338390594, Mozilla bug 1933050).
+   Multi-segment can come back when browser font engines stabilise. */
 
 :root {
   --bg: #0b0d12;
@@ -155,7 +92,7 @@ h2 {
 
 .bars {
   font-family: 'ProgressType', monospace;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-feature-settings: 'liga' 1;
   font-size: 22px;
   line-height: 1.4;
 }
@@ -190,46 +127,70 @@ h2 {
 }
 .palette-card .swatch {
   font-family: 'ProgressType', monospace;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-feature-settings: 'liga' 1;
   font-size: 20px;
   display: block;
 }
 
-.p-sequential  { font-palette: --sequential; }
-.p-rag         { font-palette: --rag; }
-.p-categorical { font-palette: --categorical; }
-.p-ocean       { font-palette: --ocean; }
-.p-mono        { font-palette: --mono; }
-.p-brand       { font-palette: --brand; }
-.p-earth       { font-palette: --earth; }
-.p-tokens      { font-palette: --tokens; }
-.p-pad3        { font-palette: --pad3; }
-.p-pad4        { font-palette: --pad4; }
-.p-pad5        { font-palette: --pad5; }
-.p-pad8        { font-palette: --pad8; }
-.p-categoricalVF { font-palette: --categoricalVF; }
+/* Each `.p-*` class sets a single foreground colour. With a monochrome font
+   `color` is the only thing that tints the bars. */
+:root {
+  --c-1: #38bdf8;
+  --c-2: #a78bfa;
+  --c-3: #f472b6;
+}
+.p-sequential  { color: #10b981; }  /* emerald  */
+.p-rag         { color: #f59e0b; }  /* amber (mid of green/amber/red) */
+.p-categorical { color: #3b82f6; }  /* blue     */
+.p-ocean       { color: #1d4ed8; }  /* blue-700 */
+.p-mono        { color: #1f2937; }  /* slate-800 */
+.p-brand       { color: #6366f1; }  /* indigo   */
+.p-earth       { color: #d97706; }  /* amber-600 */
+.p-tokens      { color: var(--c-1); }
 
-/* Axis demo: variable font is isolated to this one element. */
-#axisDemo { font-family: 'ProgressTypeVF', monospace; }
+/* Radius-variant static instances (Mid = RADI 105, Pill = RADI 210) */
+.bars-mid  { font-family: 'ProgressType-Mid',  monospace; }
+.bars-pill { font-family: 'ProgressType-Pill', monospace; }
+.bars-mid, .bars-pill {
+  font-feature-settings: 'liga' 1;
+  font-size: 22px;
+  line-height: 1.4;
+}
 
 .vertical-row {
   font-family: 'ProgressType', monospace;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-feature-settings: 'liga' 1;
   font-size: 64px;
   letter-spacing: 4px;
   display: flex;
   align-items: flex-end;
   gap: 0;
 }
+.vertical-cols { display: flex; align-items: flex-end; gap: 4px; }
+.vertical-cols .vcol { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.vertical-cols .vcol .bar {
+  font-family: 'ProgressType', monospace;
+  font-feature-settings: 'liga' 1;
+  font-size: 64px;
+  line-height: 1;
+}
+.vertical-cols .vcol code.syntax {
+  font-size: 10px;
+  min-width: 0;
+  padding: 1px 4px;
+  white-space: nowrap;
+}
 
 code.syntax {
   font-family: 'SF Mono', 'Monaco', monospace;
-  font-size: 13px;
+  font-size: 12px;
+  color: var(--muted);
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   padding: 2px 6px;
   border-radius: 4px;
 }
+.bars .row code.syntax { font-size: 11px; min-width: 175px; text-align: left; }
 
 .controls {
   display: flex;
@@ -246,8 +207,8 @@ code.syntax {
 }
 
 #playground {
-  font-family: 'ProgressType', monospace;
-  font-feature-settings: 'liga' 1, 'calt' 1;
+  font-family: 'ProgressTypeVF', monospace;
+  font-feature-settings: 'liga' 1;
   font-size: 28px;
   display: flex;
   align-items: center;
@@ -273,153 +234,117 @@ pre.code {
       View on GitHub
     </a>
   </div>
-  <p class="subtitle">An OpenType variable font that renders <code class="syntax">{h:25,10,15}</code> as a stacked horizontal progress bar — and <code class="syntax">{v:75}</code> as a vertical one.</p>
+  <p class="subtitle">An OpenType variable font that renders <code class="syntax">{h:75}</code> as a horizontal progress bar — and <code class="syntax">{v:75}</code> as a vertical one.</p>
 
   <section>
-    <h2>Single-segment (fixed-width)</h2>
+    <h2>Horizontal bars</h2>
     <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
-      Bar is a fixed-size container; fill grows inside it. The empty space on the right
-      is the unfilled portion of the track.
+      Each bar is a fixed-size container; the fill grows inside it. The empty space on the
+      right is the unfilled portion of the track.
     </p>
     <div class="bars p-categorical">
-      <div class="row"><span class="label">CPU</span><span>{h:23}</span><span class="value">23%</span></div>
-      <div class="row"><span class="label">Memory</span><span>{h:67}</span><span class="value">67%</span></div>
-      <div class="row"><span class="label">Disk</span><span>{h:91}</span><span class="value">91%</span></div>
-      <div class="row"><span class="label">Network</span><span>{h:8}</span><span class="value">8%</span></div>
+      <div class="row"><span class="label">CPU</span><code class="syntax">{h:23}</code><span>{h:23}</span><span class="value">23%</span></div>
+      <div class="row"><span class="label">Memory</span><code class="syntax">{h:67}</code><span>{h:67}</span><span class="value">67%</span></div>
+      <div class="row"><span class="label">Disk</span><code class="syntax">{h:91}</code><span>{h:91}</span><span class="value">91%</span></div>
+      <div class="row"><span class="label">Network</span><code class="syntax">{h:8}</code><span>{h:8}</span><span class="value">8%</span></div>
     </div>
-  </section>
-
-  <section>
-    <h2>Stacked multi-segment (fixed-width via padding)</h2>
-    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
-      Multi-segment bars are <em>variable-width</em> by default — they grow with the sum of
-      values. To make them appear fixed-width, pad the values to total 100 and use a CSS
-      <code class="syntax">@font-palette-values</code> override so the trailing position uses
-      the track color. The empty-looking tail is just a normal segment painted in the track color.
-    </p>
-
-    <div class="bars">
-      <div class="row p-pad3">
-        <span class="label">CPU+IO 70%</span>
-        <span>{h:30,40,30}</span>
-        <span class="value">30 + 40 + (30 pad)</span>
-      </div>
-      <div class="row p-pad4">
-        <span class="label">3 phases 50%</span>
-        <span>{h:25,10,15,50}</span>
-        <span class="value">25 + 10 + 15 + (50 pad)</span>
-      </div>
-      <div class="row p-pad5">
-        <span class="label">4 phases 70%</span>
-        <span>{h:20,15,10,25,30}</span>
-        <span class="value">20 + 15 + 10 + 25 + (30 pad)</span>
-      </div>
-      <div class="row p-pad8">
-        <span class="label">7 even, 30% gap</span>
-        <span>{h:10,10,10,10,10,10,10,30}</span>
-        <span class="value">7×10 + (30 pad)</span>
-      </div>
-    </div>
-
-    <h2 style="margin-top: 24px;">Naturally totals 100% — no padding needed</h2>
-    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
-      When your data already sums to 100, every segment is colored and the bar fills the full width.
-      RAG status is the canonical example.
-    </p>
-    <div class="bars p-rag">
-      <div class="row"><span class="label">Status</span><span>{h:45,30,25}</span><span class="value">on track / at risk / blocked</span></div>
-    </div>
-
-    <pre class="code" style="margin-top: 16px;">/* Trailing-track palette: paint the Nth position transparent so only the
-   strip + border outline shows through — matches how the empty portion of
-   single-segment {h:NN} looks. */
-@font-palette-values --pad4 {
-  font-family: 'ProgressType';
-  base-palette: 2;                /* categorical */
-  override-colors: 4 rgba(0,0,0,0);
-}
-
-.bar { font-family: 'ProgressType', monospace; font-feature-settings: 'liga' 1, 'calt' 1; }
-.bar.padded { font-palette: --pad4; }
-
-&lt;p class="bar padded"&gt;{h:25,10,15,50}&lt;/p&gt;</pre>
   </section>
 
   <section>
     <h2>Palettes</h2>
     <div class="palette-grid">
-      <div class="palette-card"><div class="name">sequential</div><span class="swatch p-sequential">{h:12,12,12,12,12,12,12,12}</span></div>
-      <div class="palette-card"><div class="name">rag</div><span class="swatch p-rag">{h:33,33,34}</span></div>
-      <div class="palette-card"><div class="name">categorical</div><span class="swatch p-categorical">{h:12,12,12,12,12,12,12,12}</span></div>
-      <div class="palette-card"><div class="name">ocean</div><span class="swatch p-ocean">{h:12,12,12,12,12,12,12,12}</span></div>
+      <div class="palette-card"><div class="name">sequential</div><span class="swatch p-sequential">{h:65}</span></div>
+      <div class="palette-card"><div class="name">rag</div><span class="swatch p-rag">{h:65}</span></div>
+      <div class="palette-card"><div class="name">categorical</div><span class="swatch p-categorical">{h:65}</span></div>
+      <div class="palette-card"><div class="name">ocean</div><span class="swatch p-ocean">{h:65}</span></div>
       <div class="palette-card"><div class="name">mono</div><span class="swatch p-mono">{h:65}</span></div>
     </div>
   </section>
 
   <section>
-    <h2>Custom palettes via CSS</h2>
+    <h2>Tinting via CSS</h2>
     <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
-      Define your own palettes with <code class="syntax">@font-palette-values</code> and
-      <code class="syntax">override-colors</code> — no font rebuild needed.
+      The font is monochrome — set <code class="syntax">color</code> on the bar element
+      (or any ancestor) to tint it. Works with named colours, hex, <code class="syntax">currentColor</code>,
+      or CSS custom properties tied to your design tokens.
     </p>
 
     <div class="bars" style="margin-bottom: 12px;">
       <div class="row">
         <span class="label">brand</span>
-        <span class="p-brand">{h:25,15,20,10,15}</span>
+        <code class="syntax">{h:65}</code>
+        <span class="p-brand">{h:65}</span>
       </div>
       <div class="row">
         <span class="label">earth</span>
-        <span class="p-earth">{h:12,12,12,12,12,12,12,12}</span>
+        <code class="syntax">{h:42}</code>
+        <span class="p-earth">{h:42}</span>
       </div>
       <div class="row">
         <span class="label">design tokens</span>
-        <span class="p-tokens">{h:30,25,20}</span>
+        <code class="syntax">{h:80}</code>
+        <span class="p-tokens">{h:80}</span>
       </div>
     </div>
 
-    <pre class="code">/* Override individual palette entries — start from a shipped base palette */
-@font-palette-values --brand {
-  font-family: 'ProgressType';
-  base-palette: 2;
-  override-colors:
-    0 #1f2937,        /* track */
-    1 #6366f1,        /* indigo  (1st segment)  */
-    2 #ec4899,        /* pink    (2nd segment)  */
-    3 #f59e0b;        /* amber   (3rd segment)  */
+    <pre class="code">.bar {
+  font-family: 'ProgressType', monospace;
+  font-feature-settings: 'liga' 1;
 }
 
-/* You can also pull from CSS custom properties — connects to design tokens */
-@font-palette-values --tokens {
-  font-family: 'ProgressType';
-  base-palette: 0;
-  override-colors:
-    1 var(--brand-primary),
-    2 var(--brand-secondary),
-    3 var(--brand-accent);
-}
+/* Tint individual bars however you want. */
+.bar.brand  { color: #6366f1; }                /* indigo */
+.bar.earth  { color: #d97706; }                /* amber-600 */
+.bar.tokens { color: var(--brand-primary); }   /* design-token reference */
 
-.bar { font-palette: --brand; }
-&lt;p class="bar"&gt;{h:25,15,20}&lt;/p&gt;</pre>
-
-    <p style="color: var(--muted); font-size: 12px; margin: 16px 0 0;">
-      <strong style="color: var(--fg);">Heads-up:</strong> the standard CSS <code class="syntax">color</code>
-      property does not recolor CPAL fonts — only <code class="syntax">font-palette</code> does.
-      Browser support: Chrome 101+, Safari 15.4+, Firefox 107+ (~94% globally).
-      Older renderers fall back to the <code class="syntax">base-palette</code> colors instead of honoring overrides.
-    </p>
+&lt;p class="bar brand"&gt;{h:65}&lt;/p&gt;</pre>
   </section>
 
   <section>
     <h2>Vertical (sparkline-style)</h2>
-    <div class="vertical-row p-categorical">
-      {v:10}{v:25}{v:40}{v:55}{v:70}{v:85}{v:100}{v:80}{v:60}{v:45}{v:30}{v:15}
+    <div class="vertical-cols p-categorical">
+      <div class="vcol"><span class="bar">{v:10}</span><code class="syntax">{v:10}</code></div>
+      <div class="vcol"><span class="bar">{v:25}</span><code class="syntax">{v:25}</code></div>
+      <div class="vcol"><span class="bar">{v:40}</span><code class="syntax">{v:40}</code></div>
+      <div class="vcol"><span class="bar">{v:55}</span><code class="syntax">{v:55}</code></div>
+      <div class="vcol"><span class="bar">{v:70}</span><code class="syntax">{v:70}</code></div>
+      <div class="vcol"><span class="bar">{v:85}</span><code class="syntax">{v:85}</code></div>
+      <div class="vcol"><span class="bar">{v:100}</span><code class="syntax">{v:100}</code></div>
+      <div class="vcol"><span class="bar">{v:80}</span><code class="syntax">{v:80}</code></div>
+      <div class="vcol"><span class="bar">{v:60}</span><code class="syntax">{v:60}</code></div>
+      <div class="vcol"><span class="bar">{v:45}</span><code class="syntax">{v:45}</code></div>
+      <div class="vcol"><span class="bar">{v:30}</span><code class="syntax">{v:30}</code></div>
+      <div class="vcol"><span class="bar">{v:15}</span><code class="syntax">{v:15}</code></div>
     </div>
-    <p style="color: var(--muted); font-size: 12px; margin: 8px 0 0;">Vertical bars are single-segment only.</p>
+    <p style="color: var(--muted); font-size: 12px; margin: 12px 0 0;">Vertical bars too — same single-segment rendering.</p>
   </section>
 
   <section>
-    <h2>Variable axes — Width, Weight, Radius</h2>
+    <h2>Corner radius (RADI axis)</h2>
+    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
+      Three pre-rendered static instances of the variable font, pinned at
+      <code class="syntax">RADI 0</code>, <code class="syntax">RADI 105</code>, and
+      <code class="syntax">RADI 210</code>. The font also exposes a continuous RADI axis
+      between 0 and 210 if you want to interpolate it yourself.
+    </p>
+    <div class="bars p-categorical" style="margin-bottom: 8px;">
+      <div class="row"><span class="label">square (RADI 0)</span><code class="syntax">{h:65}</code><span>{h:65}</span></div>
+    </div>
+    <div class="bars bars-mid" style="margin-bottom: 8px;">
+      <div class="row"><span class="label">mid (RADI 105)</span><code class="syntax">{h:65}</code><span>{h:65}</span></div>
+    </div>
+    <div class="bars bars-pill">
+      <div class="row"><span class="label">pill (RADI 210)</span><code class="syntax">{h:65}</code><span>{h:65}</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Playground</h2>
+    <div class="controls">
+      <span class="axis-label">value</span>
+      <input type="range" id="pct" min="0" max="100" value="50">
+      <span class="display" id="display">{h:50}</span>
+    </div>
     <div class="controls">
       <span class="axis-label">Width</span>
       <input type="range" id="wdth" min="50" max="150" value="100" step="10">
@@ -435,19 +360,7 @@ pre.code {
       <input type="range" id="rad" min="0" max="210" value="0" step="10">
       <span class="display" id="radVal">0</span>
     </div>
-    <div id="axisDemo" class="bars p-categoricalVF" style="font-variation-settings: 'wdth' 100, 'wght' 400, 'RADI' 0;">
-      <div class="row"><span class="label">single</span><span>{h:65}</span></div>
-      <div class="row"><span class="label">stacked</span><span>{h:25,15,20}</span></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Playground</h2>
-    <div class="controls">
-      <input type="range" id="pct" min="0" max="100" value="50">
-      <span class="display" id="display">{h:50}</span>
-    </div>
-    <div id="playground" class="p-categorical">
+    <div id="playground" class="p-categorical" style="font-variation-settings: 'wdth' 100, 'wght' 400, 'RADI' 0;">
       <span id="hbar">{h:50}</span>
       <span id="vbar">{v:50}</span>
     </div>
@@ -462,18 +375,14 @@ pre.code {
   font-stretch: 50% 150%;
 }
 
-@font-palette-values --rag {
-  font-family: 'ProgressType';
-  base-palette: 1;       /* 0=sequential, 1=rag, 2=categorical, 3=ocean, 4=mono */
-}
-
 .bar {
   font-family: 'ProgressType', monospace;
-  font-feature-settings: 'liga' 1, 'calt' 1;
-  font-palette: --rag;
+  font-feature-settings: 'liga' 1;
+  color: #ef4444;        /* tint with any CSS color */
+  /* font-variation-settings: 'RADI' 210; — pill ends */
 }
 
-&lt;p class="bar"&gt;Status: {h:45,30,25}&lt;/p&gt;</pre>
+&lt;p class="bar"&gt;Disk usage: {h:91}&lt;/p&gt;</pre>
   </section>
 </main>
 
@@ -507,13 +416,18 @@ const update = rafThrottle(() => {
 });
 slider.addEventListener('input', update); update();
 
+// Variable axis sliders for the playground. With COLR/CPAL gone the GPU
+// rasterisation crash class is gone, but we still rafThrottle the live
+// updates and (for the larger-cardinality RADI axis) only commit on change
+// rather than every input frame — both cheap insurance against font-cache
+// pressure under fast drags.
+const playground = document.getElementById('playground');
 const wdth = document.getElementById('wdth');
 const wght = document.getElementById('wght');
 const rad = document.getElementById('rad');
 const wdthVal = document.getElementById('wdthVal');
 const wghtVal = document.getElementById('wghtVal');
 const radVal = document.getElementById('radVal');
-const axisDemo = document.getElementById('axisDemo');
 function axisSettings() {
   return `'wdth' ${wdth.value}, 'wght' ${wght.value}, 'RADI' ${rad.value}`;
 }
@@ -521,29 +435,14 @@ const updateAxes = rafThrottle(() => {
   wdthVal.textContent = wdth.value;
   wghtVal.textContent = wght.value;
   radVal.textContent = rad.value;
-  axisDemo.style.fontVariationSettings = axisSettings();
+  playground.style.fontVariationSettings = axisSettings();
 });
 wdth.addEventListener('input', updateAxes);
 wght.addEventListener('input', updateAxes);
-
-// rad combines with wdth+wght into 11×9×22 ≈ 2k possible variation tuples;
-// updating live during drag triggers Chromium STATUS_BREAKPOINT crashes
-// (heap corruption from rapid font-variation-settings churn). Update only
-// on commit (release / arrow-key change), and live-update just the value
-// label so the user can still see what they're aiming at.
+// rad: live label-only; commit font on release/change.
 const updateRadLabel = rafThrottle(() => { radVal.textContent = rad.value; });
 rad.addEventListener('input', updateRadLabel);
 rad.addEventListener('change', updateAxes);
-
-// On release, snap to the final value once with no axis change pending.
-function snapAxes(e) {
-  axisDemo.style.fontVariationSettings = axisSettings();
-}
-[wdth, wght].forEach(el => {
-  el.addEventListener('pointerup', snapAxes);
-  el.addEventListener('change', snapAxes);
-});
-
 updateAxes();
 </script>
 </body>

@@ -29,12 +29,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          # Static instances (TTF + WOFF2).
-          cp fonts/ttf/*.ttf release-assets/
-          cp fonts/webfonts/*.woff2 release-assets/
+          # Static instances (TTF + WOFF2). Suffix every filename with the release tag.
+          for f in fonts/ttf/*.ttf fonts/webfonts/*.woff2; do
+            base=$(basename "$f")
+            name="${base%.*}"
+            ext="${base##*.}"
+            cp "$f" "release-assets/${name}-${TAG}.${ext}"
+          done
           # Variable font: copy to friendlier names (GitHub mangles [ ] , in asset names).
-          cp "fonts/variable/ProgressType[RADI,wdth,wght].ttf"   release-assets/ProgressType-VF.ttf
-          cp "fonts/variable/ProgressType[RADI,wdth,wght].woff2" release-assets/ProgressType-VF.woff2
+          cp "fonts/variable/ProgressType[RADI,wdth,wght].ttf"   "release-assets/ProgressType-VF-${TAG}.ttf"
+          cp "fonts/variable/ProgressType[RADI,wdth,wght].woff2" "release-assets/ProgressType-VF-${TAG}.woff2"
           # Also bundle the entire fonts/ tree as a zip for convenience.
           ( cd fonts && zip -r "../release-assets/ProgressType-${TAG}.zip" . )
           ls -la release-assets/
