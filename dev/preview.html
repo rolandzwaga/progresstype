@@ -221,13 +221,19 @@ code.syntax {
   font-feature-settings: 'liga' 1;
   font-size: 56px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
   padding: 16px 0;
 }
+#playground .hstack { display: flex; flex-direction: column; gap: 12px; }
 #playground #hbar-labeled { font-feature-settings: 'liga' 1, 'ss01' 1; }
-#playground .hrow { display: flex; align-items: center; gap: 24px; }
+/* Vertical bar sized to match the stacked-horizontal column. Each horizontal
+   glyph is ~h_bar_height/UPM * font-size tall (~23.5px at 56px font-size);
+   two stacked ≈ 47px plus the 12px gap ≈ 59px. The vertical glyph height is
+   ~v_bar_height/UPM * font-size = 0.9 * font-size, so ~120px of font-size
+   gets us ~108px of glyph — close to the stack. */
+#playground #vbar { font-size: 120px; line-height: 1; }
 
 pre.code {
   font-family: 'SF Mono', monospace;
@@ -399,11 +405,11 @@ pre.code {
       <span class="display" id="radVal">0</span>
     </div>
     <div id="playground" class="p-categorical" style="font-variation-settings: 'wdth' 100, 'wght' 400, 'RADI' 0;">
-      <div class="hrow">
+      <div class="hstack">
         <span id="hbar">{h:50}</span>
-        <span id="vbar">{v:50}</span>
+        <span id="hbar-labeled">{h:50}</span>
       </div>
-      <span id="hbar-labeled">{h:50}</span>
+      <span id="vbar">{v:50}</span>
     </div>
   </section>
 
