@@ -192,6 +192,16 @@ code.syntax {
 }
 .bars .row code.syntax { font-size: 11px; min-width: 175px; text-align: left; }
 
+/* Toggle the percentage-label stylistic set on a per-element basis. */
+.bars-labeled, .bars-labeled .bar { font-feature-settings: 'liga' 1, 'ss01' 1; }
+
+/* Container-query example: only show the percentage when the bar element has
+   enough room to render legible digits. Falls back to bare bars otherwise. */
+.bars-auto-label { container-type: inline-size; }
+@container (min-width: 220px) {
+  .bars-auto-label .bar { font-feature-settings: 'liga' 1, 'ss01' 1; }
+}
+
 .controls {
   display: flex;
   align-items: center;
@@ -209,12 +219,15 @@ code.syntax {
 #playground {
   font-family: 'ProgressTypeVF', monospace;
   font-feature-settings: 'liga' 1;
-  font-size: 28px;
+  font-size: 56px;
   display: flex;
-  align-items: center;
-  gap: 24px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   padding: 16px 0;
 }
+#playground #hbar-labeled { font-feature-settings: 'liga' 1, 'ss01' 1; }
+#playground .hrow { display: flex; align-items: center; gap: 24px; }
 
 pre.code {
   font-family: 'SF Mono', monospace;
@@ -248,6 +261,31 @@ pre.code {
       <div class="row"><span class="label">Disk</span><code class="syntax">{h:91}</code><span>{h:91}</span><span class="value">91%</span></div>
       <div class="row"><span class="label">Network</span><code class="syntax">{h:8}</code><span>{h:8}</span><span class="value">8%</span></div>
     </div>
+  </section>
+
+  <section>
+    <h2>In-bar percentage label (ss01)</h2>
+    <p style="color: var(--muted); font-size: 13px; margin: -8px 0 16px;">
+      The font ships a <code class="syntax">ss01</code> stylistic set that swaps each
+      <code class="syntax">prog_h_full_NN</code> for a <code class="syntax">.label</code>
+      variant — same bar with the percentage punched through it as a knock-out.
+      Enable via <code class="syntax">font-feature-settings: 'ss01' 1;</code>.
+    </p>
+    <div class="bars bars-labeled p-categorical">
+      <div class="row"><span class="label">CPU</span><code class="syntax">{h:23}</code><span>{h:23}</span></div>
+      <div class="row"><span class="label">Memory</span><code class="syntax">{h:67}</code><span>{h:67}</span></div>
+      <div class="row"><span class="label">Disk</span><code class="syntax">{h:91}</code><span>{h:91}</span></div>
+      <div class="row"><span class="label">Network</span><code class="syntax">{h:8}</code><span>{h:8}</span></div>
+    </div>
+
+    <p style="color: var(--muted); font-size: 13px; margin: 16px 0 8px;">
+      The label is a fixed pixel size, so at small bar sizes the digits become illegible.
+      Use a CSS container query to drop labels below a usable width:
+    </p>
+    <pre class="code">.bars-auto-label { container-type: inline-size; }
+@container (min-width: 220px) {
+  .bars-auto-label .bar { font-feature-settings: 'liga' 1, 'ss01' 1; }
+}</pre>
   </section>
 
   <section>
@@ -361,8 +399,11 @@ pre.code {
       <span class="display" id="radVal">0</span>
     </div>
     <div id="playground" class="p-categorical" style="font-variation-settings: 'wdth' 100, 'wght' 400, 'RADI' 0;">
-      <span id="hbar">{h:50}</span>
-      <span id="vbar">{v:50}</span>
+      <div class="hrow">
+        <span id="hbar">{h:50}</span>
+        <span id="vbar">{v:50}</span>
+      </div>
+      <span id="hbar-labeled">{h:50}</span>
     </div>
   </section>
 
@@ -407,11 +448,13 @@ function rafThrottle(fn) {
 const slider = document.getElementById('pct');
 const display = document.getElementById('display');
 const hbar = document.getElementById('hbar');
+const hbarLabeled = document.getElementById('hbar-labeled');
 const vbar = document.getElementById('vbar');
 const update = rafThrottle(() => {
   const v = slider.value;
   display.textContent = '{h:' + v + '} {v:' + v + '}';
   hbar.textContent = '{h:' + v + '}';
+  hbarLabeled.textContent = '{h:' + v + '}';
   vbar.textContent = '{v:' + v + '}';
 });
 slider.addEventListener('input', update); update();

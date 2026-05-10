@@ -88,6 +88,10 @@ def build_font(glyph_data, feature_code,
     fb.setupNameTable({
         "familyName": family_name,
         "styleName": style,
+        "uniqueFontIdentifier": f"{family_name}-{style};{FONT_VERSION}",
+        "fullName": f"{family_name} {style}" if style != REGULAR_STYLE else family_name,
+        "version": f"Version {FONT_VERSION}",
+        "psName": f"{family_name}-{style}".replace(" ", ""),
         "copyright": "Copyright 2026 The ProgressType Project Authors",
         "manufacturer": "ProgressType Project",
         "licenseDescription": "This Font Software is licensed under the SIL Open Font License, Version 1.1.",
@@ -106,8 +110,25 @@ def build_font(glyph_data, feature_code,
         fsSelection=0x00C0,
         usWidthClass=5,
         version=4,
+        # Latin-1 + Latin-2 + Mac Roman code page support
+        ulCodePageRange1=(1 << 0) | (1 << 1) | (1 << 29),
+        # PANOSE: 2 = Latin Text, 11 = Sans Normal Sans, then 0s; family is
+        # NOT monospace (progress-bar glyphs are wide), so don't set
+        # sFamilyClass to monospaced and panose[3] stays 0 ("Any" proportion).
+        panose=dict(
+            bFamilyType=2,         # Latin Text
+            bSerifStyle=11,        # Normal Sans
+            bWeight=5,             # Book
+            bProportion=0,         # Any (not monospaced)
+            bContrast=0,
+            bStrokeVariation=0,
+            bArmStyle=0,
+            bLetterForm=0,
+            bMidline=0,
+            bXHeight=0,
+        ),
     )
-    fb.setupPost()
+    fb.setupPost(isFixedPitch=0)
 
     now = datetime.now()
     epoch_1904 = datetime(1904, 1, 1)
@@ -126,12 +147,19 @@ def build_font(glyph_data, feature_code,
 
     font = fb.font
 
-    # gasp, post
+    # gasp + smart-dropout prep table — fontbakery best practice for
+    # consistent rendering across hinting capabilities.
     from fontTools.ttLib.tables._g_a_s_p import table__g_a_s_p
+    from fontTools.ttLib.tables._p_r_e_p import table__p_r_e_p
+    from fontTools.ttLib.tables.ttProgram import Program
     gasp = table__g_a_s_p()
     gasp.gaspRange = {0xFFFF: 0x000F}
     font["gasp"] = gasp
-    font["post"].isFixedPitch = 0
+    prep = table__p_r_e_p()
+    prep.program = Program()
+    # PUSHW 0x01FF; SCANCTRL; PUSHB 0x04; SCANTYPE — turn on smart-dropout.
+    prep.program.fromBytecode(b"\xb8\x01\xff\x85\xb0\x04\x8d")
+    font["prep"] = prep
 
     # COLR/CPAL intentionally NOT added — Chrome's Skia + DirectWrite GPU
     # rasteriser crashes intermittently on COLR fonts (skia issue 338390594
@@ -144,7 +172,63 @@ def build_font(glyph_data, feature_code,
     name_table = font["name"]
     name_table.names = [r for r in name_table.names if r.platformID != 1]
 
+    _add_lig_carets(font)
+
     return font
+
+
+def _add_lig_carets(font):
+    """Add a single placeholder caret at glyph-centre for every ligature output.
+
+    Our ligatures (`{h:NN}` -> prog_h_full_NN, `{v:NN}` -> prog_v_NN) collapse
+    a multi-character source sequence into a single visual progress bar with
+    no meaningful internal split points. OpenType's spec arguably allows
+    CaretCount=0 here, but OTS (Chrome's font validator) rejects it as
+    'bad caret value count: 0'. So we ship one caret per ligature at the
+    glyph's horizontal centre — a benign placeholder that satisfies both
+    OTS and fontbakery's `ligature_carets` check.
+    """
+    from fontTools.ttLib import newTable
+    from fontTools.ttLib.tables import otTables
+
+    # Coverage tables MUST be sorted by glyph ID, not glyph name.
+    lig_glyphs = [
+        g for g in font.getGlyphOrder()
+        if (g.startswith("prog_h_full_") or g.startswith("prog_v_"))
+        and ".label" not in g
+    ]
+    if not lig_glyphs:
+        return
+
+    hmtx = font["hmtx"].metrics
+    cov = otTables.Coverage()
+    cov.glyphs = lig_glyphs
+    lig_caret_list = otTables.LigCaretList()
+    lig_caret_list.Coverage = cov
+    lig_caret_list.LigGlyphCount = len(lig_glyphs)
+    lig_caret_list.LigGlyph = []
+    for gname in lig_glyphs:
+        advance = hmtx[gname][0]
+        caret = otTables.CaretValue()
+        caret.Format = 1
+        caret.Coordinate = advance // 2
+        lig = otTables.LigGlyph()
+        lig.CaretCount = 1
+        lig.CaretValue = [caret]
+        lig_caret_list.LigGlyph.append(lig)
+
+    if "GDEF" not in font:
+        gdef_table = newTable("GDEF")
+        gdef_table.table = otTables.GDEF()
+        gdef_table.table.Version = 0x00010002  # v1.2: GDEF with MarkGlyphSetsDef field
+        gdef_table.table.GlyphClassDef = None
+        gdef_table.table.AttachList = None
+        gdef_table.table.LigCaretList = None
+        gdef_table.table.MarkAttachClassDef = None
+        gdef_table.table.MarkGlyphSetsDef = None
+        font["GDEF"] = gdef_table
+
+    font["GDEF"].table.LigCaretList = lig_caret_list
 
 
 def build_variable_font(master_fonts, axes_config, named_instances=None):
@@ -191,17 +275,13 @@ def build_variable_font(master_fonts, axes_config, named_instances=None):
     vf, _, _ = varLib.build(ds)
     vf["head"].fontRevision = _font_revision_float()
 
-    # STAT table — required for variable fonts with named instances
+    # STAT table — required for variable fonts with named instances.
+    # wdth/RADI values get elided defaults so that the platform-displayed
+    # "family + style" name stays under the 31-char OpenType limit even at
+    # extreme weights (e.g. "ProgressType ExtraBold" = 22 chars).
     stat_axes = [
         dict(tag="wdth", name="Width", values=[
-            dict(value=50,    name="UltraCondensed"),
-            dict(value=62.5,  name="ExtraCondensed"),
-            dict(value=75,    name="Condensed"),
-            dict(value=87.5,  name="SemiCondensed"),
-            dict(value=100,   name="Normal", flags=0x2),  # ElidableAxisValueName
-            dict(value=112.5, name="SemiExpanded"),
-            dict(value=125,   name="Expanded"),
-            dict(value=150,   name="ExtraExpanded"),
+            dict(value=100, name="Normal", flags=0x2),  # ElidableAxisValueName
         ]),
         dict(tag="wght", name="Weight", values=[
             dict(value=100, name="Thin"),
@@ -213,6 +293,11 @@ def build_variable_font(master_fonts, axes_config, named_instances=None):
             dict(value=700, name="Bold"),
             dict(value=800, name="ExtraBold"),
             dict(value=900, name="Black"),
+        ]),
+        dict(tag="RADI", name="Radius", values=[
+            dict(value=0,   name="Square", flags=0x2),  # ElidableAxisValueName
+            dict(value=105, name="Mid"),
+            dict(value=210, name="Pill"),
         ]),
     ]
     buildStatTable(vf, stat_axes)
@@ -249,6 +334,10 @@ def clean_static_glyphs(static):
     # COLR + variable-table-leftover combinations.
     if "STAT" in static:
         del static["STAT"]
+
+    # Re-apply ligature-caret entries: instantiateVariableFont regenerates
+    # GDEF from GSUB and resets ligature CaretCount to 0, which OTS rejects.
+    _add_lig_carets(static)
     from fontTools.pens.recordingPen import RecordingPen
     from fontTools.pens.ttGlyphPen import TTGlyphPen
 

@@ -13,6 +13,7 @@ from sources.config import (
 from sources.glyphs.base_imported import draw_base_glyphs
 from sources.glyphs.progress_h import (
     draw_progress_h_glyphs, generate_progress_h_full_liga_code,
+    generate_progress_h_ss01_code,
 )
 from sources.glyphs.progress_v import (
     draw_progress_v_glyphs, generate_progress_v_feature_code,
@@ -25,10 +26,13 @@ from sources.export import export_font
 
 def _feature_code():
     h_full_fea = generate_progress_h_full_liga_code()
+    h_ss01_fea = generate_progress_h_ss01_code()
     v_fea = generate_progress_v_feature_code()
 
     return f"""
 {h_full_fea}
+
+{h_ss01_fea}
 
 {v_fea}
 
@@ -36,6 +40,13 @@ feature liga {{
     lookup prog_h_full_liga;
     lookup prog_v_liga;
 }} liga;
+
+feature ss01 {{
+    featureNames {{
+        name "Show percentage label inside the bar";
+    }};
+    lookup prog_h_full_label;
+}} ss01;
 """
 
 
@@ -79,7 +90,7 @@ def main():
     print(f"  Glyphs per master: {glyph_count}")
 
     fvar_instances = [
-        (style, {"Width": wdth, "Weight": wght})
+        (style, {"Width": wdth, "Weight": wght, "Radius": 0})
         for style, wdth, wght in NAMED_INSTANCES
     ]
 

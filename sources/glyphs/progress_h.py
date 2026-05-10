@@ -14,6 +14,7 @@ font engines settle on a stable color-font path we can re-introduce them.
 import math
 
 from sources.config import FontParams
+from sources.glyphs.base_imported import _IMPORTED_GLYPHS
 
 
 # Each arc is rendered as N_QUADS quadratic Béziers using qCurveTo with the
@@ -140,8 +141,96 @@ def _draw_full_base(pen, p, pct):
     _draw_full_fill(pen, p, pct)
 
 
+# ---------------------------------------------------------------------------
+# Knock-out percentage label (.label glyph variant, opted-in via ss01)
+#
+# IBM Plex Mono digit + percent-sign outlines are embedded into each
+# prog_h_full_NN.label glyph with REVERSED winding direction. Under the
+# non-zero winding rule, those reversed contours cancel against the bar's
+# positive-winding fill / track-frame contours, so the page background
+# shows through wherever the digits overlap solid bar geometry.
+# ---------------------------------------------------------------------------
+
+# IBM Plex Mono native cell is 600 units wide; base_imported.py shrinks x
+# by 500/600 for our 500-wide ASCII cells. We replicate that shrink and
+# combine it with our own uniform scale.
+_PLEX_NATIVE_CELL_W = 600
+_OUR_CELL_W = 500
+_PLEX_CAP_H = 700
+_LABEL_HEIGHT_RATIO = 0.9   # digit cap-height as a fraction of bar inner-height
+
+
+def _emit_plex_glyph(pen, char, scale, dx, dy):
+    """Draw an IBM Plex Mono character into `pen`, transformed by `scale`
+    (uniform) and translated to (dx, dy) where dy is the digit baseline.
+    Pass a ReverseContourPen if you want knock-out winding.
+    """
+    if char not in _IMPORTED_GLYPHS:
+        return
+    sx = scale * (_OUR_CELL_W / _PLEX_NATIVE_CELL_W)
+    sy = scale
+    for cmd, args in _IMPORTED_GLYPHS[char]["commands"]:
+        if cmd == "moveTo":
+            pen.moveTo((args[0][0] * sx + dx, args[0][1] * sy + dy))
+        elif cmd == "lineTo":
+            pen.lineTo((args[0][0] * sx + dx, args[0][1] * sy + dy))
+        elif cmd == "qCurveTo":
+            pen.qCurveTo(*[(p[0] * sx + dx, p[1] * sy + dy) for p in args])
+        elif cmd == "curveTo":
+            pen.curveTo(*[(p[0] * sx + dx, p[1] * sy + dy) for p in args])
+        elif cmd == "closePath":
+            pen.closePath()
+        elif cmd == "endPath":
+            pen.endPath()
+
+
+def _draw_label_knockout(pen, p, pct):
+    """Add reversed-winding percentage-label contours inside the bar.
+
+    Digit size is FIXED across all masters (calibrated to the default master's
+    inner-height) — at heavy weights the label may overflow into the bar's
+    strip borders, at narrow widths it may overflow horizontally; both are
+    accepted trade-offs of a fixed-size label.
+    """
+    from fontTools.pens.reverseContourPen import ReverseContourPen
+
+    # Fixed digit dimensions, calibrated to wght=400 (border=50) where
+    # inner_height = h_bar_height - 2*border = 420 - 100 = 320.
+    DEFAULT_BORDER = 50
+    fixed_inner_h = p.h_bar_height - 2 * DEFAULT_BORDER
+    target_h = _LABEL_HEIGHT_RATIO * fixed_inner_h
+    scale = target_h / _PLEX_CAP_H
+    cell_w = _OUR_CELL_W * scale
+
+    # Y position: digit baseline so cap-height is centred on the bar's
+    # vertical midline. Constant across masters (h_bar_baseline / h_bar_height
+    # don't vary with wdth/wght/RADI).
+    bar_mid_y = p.h_bar_baseline + p.h_bar_height / 2
+    text_y = bar_mid_y - target_h / 2
+
+    label = f"{pct}%"
+    text_w = len(label) * cell_w
+    text_x = p.h_bar_width / 2 - text_w / 2  # centres in bar; scales with wdth
+
+    rev = ReverseContourPen(pen)
+    for i, ch in enumerate(label):
+        _emit_plex_glyph(rev, ch, scale, text_x + i * cell_w, text_y)
+
+
+def _draw_full_labeled(pen, p, pct):
+    """prog_h_full_NN.label: bare bar + knock-out percentage label."""
+    _draw_full_base(pen, p, pct)
+    _draw_label_knockout(pen, p, pct)
+
+
 def draw_progress_h_glyphs(glyph_data, params=None):
-    """Add horizontal progress bar glyphs (prog_h_full_0..prog_h_full_100)."""
+    """Add horizontal progress bar glyphs.
+
+    For each pct in 0..100 emits two glyphs:
+      - prog_h_full_NN          : bare bar (no label)
+      - prog_h_full_NN.label    : bar with knock-out percentage label,
+                                  swapped in by the ss01 stylistic-set feature.
+    """
     if params is None:
         params = FontParams()
     p = params
@@ -150,6 +239,10 @@ def draw_progress_h_glyphs(glyph_data, params=None):
         def make_full_base(pct_=pct):
             return lambda pen: _draw_full_base(pen, p, pct_)
         glyph_data[f"prog_h_full_{pct}"] = (p.h_bar_width, make_full_base())
+
+        def make_full_labeled(pct_=pct):
+            return lambda pen: _draw_full_labeled(pen, p, pct_)
+        glyph_data[f"prog_h_full_{pct}.label"] = (p.h_bar_width, make_full_labeled())
 
 
 def generate_progress_h_full_liga_code():
@@ -170,4 +263,18 @@ def generate_progress_h_full_liga_code():
         seq = f"uni007B uni0068 uni003A uni003{d} uni007D"
         lines.append(f"  sub {seq} by prog_h_full_{d};")
     lines.append("} prog_h_full_liga;")
+    return "\n".join(lines)
+
+
+def generate_progress_h_ss01_code():
+    """ss01 stylistic set: swap each prog_h_full_NN for its labeled variant.
+
+    Enable via CSS `font-feature-settings: 'ss01' 1;` to show the percentage
+    inside the bar. Disable to render bare bars (e.g. via media query at
+    small font sizes where the digits become illegible).
+    """
+    lines = ["lookup prog_h_full_label {"]
+    for pct in range(0, 101):
+        lines.append(f"  sub prog_h_full_{pct} by prog_h_full_{pct}.label;")
+    lines.append("} prog_h_full_label;")
     return "\n".join(lines)

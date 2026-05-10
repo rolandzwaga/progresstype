@@ -17,14 +17,21 @@ def _rect(pen, x0, y0, x1, y1):
 
 
 def _track_metrics(p):
+    """Outer (track) bounds and inner (fill) bounds.
+
+    The radius axis affects the *vertical* fill bounds only — rounded ends are
+    at the top and bottom of a vertical bar, so the fill rect must keep clear
+    of those caps. The horizontal fill bounds are inset by border alone; the
+    bar's left/right sides are straight regardless of radius.
+    """
     x0 = p.v_bar_lead
     y0 = p.v_bar_baseline
     x1 = p.v_bar_lead + (p.v_bar_width - p.v_bar_lead - p.v_bar_trail)
     y1 = p.v_bar_baseline + p.v_bar_height
 
-    fx0 = x0 + p.v_bar_border + p.v_bar_padding + p.v_bar_radius
+    fx0 = x0 + p.v_bar_border + p.v_bar_padding
     fy0 = y0 + p.v_bar_border + p.v_bar_padding + p.v_bar_radius
-    fx1 = x1 - p.v_bar_border - p.v_bar_padding - p.v_bar_radius
+    fx1 = x1 - p.v_bar_border - p.v_bar_padding
     fy1 = y1 - p.v_bar_border - p.v_bar_padding - p.v_bar_radius
 
     return (x0, y0, x1, y1), (fx0, fy0, fx1, fy1)
