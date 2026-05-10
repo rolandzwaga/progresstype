@@ -43,17 +43,22 @@ jobs:
           TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
           echo "Using release tag: $TAG"
 
-          # Pull the two woff2 files preview.html needs from the latest release.
+          # Pull the four woff2 files preview.html needs from the latest release.
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern "ProgressType-Regular-${TAG}.woff2" \
+            --pattern "ProgressType-Mid-${TAG}.woff2" \
+            --pattern "ProgressType-Pill-${TAG}.woff2" \
             --pattern "ProgressType-VF-${TAG}.woff2" \
             --dir _site/fonts/
 
-          # Rewrite the two @font-face srcs to point at the tag-suffixed asset
-          # filenames now staged under fonts/. The in-page code-example block at
-          # ~line 455 has no "../" prefix and is left untouched.
+          # Rewrite the @font-face srcs to point at the tag-suffixed asset
+          # filenames now staged under fonts/. The in-page code-example block
+          # below the live @font-face section has no "../" prefix and is left
+          # untouched.
           sed -i \
             -e "s|\\.\\./fonts/webfonts/ProgressType-Regular\\.woff2|fonts/ProgressType-Regular-${TAG}.woff2|" \
+            -e "s|\\.\\./fonts/webfonts/ProgressType-Mid\\.woff2|fonts/ProgressType-Mid-${TAG}.woff2|" \
+            -e "s|\\.\\./fonts/webfonts/ProgressType-Pill\\.woff2|fonts/ProgressType-Pill-${TAG}.woff2|" \
             -e "s|\\.\\./fonts/variable/ProgressType\\[RADI,wdth,wght\\]\\.woff2|fonts/ProgressType-VF-${TAG}.woff2|" \
             _site/index.html
 
